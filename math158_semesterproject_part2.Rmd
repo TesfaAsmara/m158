@@ -79,7 +79,7 @@ For the $\texttt{lol10}$ data, we could write the equation of the least squares 
     $\hat{\log(\text{total damage dealt})} =$ `r loglolmodel$coefficients[1]` + `r loglolmodel$coefficients[2]` $\times \log(\text{gold earned})$
 </p>
 
-This models our belief that multiplicative change in the predictor variable is associated with multiplicative change in the outcoume variable. In this case, $\beta_1$ = `r loglolmodel$coefficients[2]`. Hence, a one-percent increase in gold earned is associated with a `r loglolmodel$coefficients[2]` percent change in total damage dealt.
+This models our belief that multiplicative change in the predictor variable is associated with multiplicative change in the outcome variable. In this case, $\beta_1$ = `r loglolmodel$coefficients[2]`. Hence, a one-percent increase in gold earned is associated with a `r loglolmodel$coefficients[2]` percent change in total damage dealt.
 
 ![Variables and their descriptions](./Variables_and_their_descriptions.pdf)
 
