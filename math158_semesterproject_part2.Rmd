@@ -15,6 +15,7 @@ library(janitor)
 library(ggridges)
 library(ggplot2)
 library(skimr)
+library(broom)
 knitr::opts_chunk$set(fig.pos="H", out.extra="")
 lol10 <- read_csv('training_data.csv')
 lol10 <- clean_names(lol10)
@@ -43,39 +44,71 @@ lol10 %>%
 ```
 
 ```{r residyhatplot,fig.height = 3, fig.width = 4, fig.cap = "Residual plot for the model predicting total damage dealt from gold earned on the blue team for 10,000 Gold-ranked matches.",echo=FALSE}
-lolmodel <- lm((b_gold_earned) ~ (b_total_damage_dealt), data = lol10)
+lolmodel <- lm(b_total_damage_dealt ~b_gold_earned, data = lol10)
+lolmodelT <-lm(sqrt(b_total_damage_dealt) ~ sqrt(b_gold_earned), data = lol10)
+
 lolmodel %>%
   ggplot(aes(x=lolmodel$fitted.values ,y= lolmodel$residuals))+
   geom_point()+
   labs(x = "Predicted values of total damage dealt", y="Residuals") + geom_hline(yintercept=0, linetype="dashed", color = "red")
 ```
 
-Next, we consider $H_0$. In this instance, we have: $H_0:\beta_1 = 0$ and $H_a:\beta_1 \neq 0.$ The 95% confidence interval for $\beta_1$ is $(0.066,0.067)$; this means that we are 95% confident that $\beta_1$ is in this range. Since the confidence interval for $\beta_1$ does not contain 0, it can be concluded that there is evidence of a linear relationship between the gold earned and the total damage dealt for the blue team.
+Looking at out plots we see that there is an $R^2$ value of 0.8941 meaning that 89% of the variation in the total damage donecan be explained by the amount of gold that a player earns in a game. Next, we consider $H_0$. In this instance, we have: $H_0:\beta_1 = 0$ and $H_a:\beta_1 \neq 0.$ The 95% confidence interval for $\beta_1$ is $(0.066,0.067)$; this means that we are 95% confident that $\beta_1$ is in this range. Since the confidence interval for $\beta_1$ does not contain 0, it can be concluded that there is evidence of a linear relationship between the gold earned and the total damage dealt for the blue team.
+
+The residual plot has a semi-quadratic shape indicating that the model is not fit for regresson as we would want a regression plot to be a random scatter rather than contain any trends. This along with the failure of LINE conditions indicates that we should transform our data.
 
 ```{r,echo=FALSE, results='hide'}
 confint(lolmodel)
+summary(lolmodel)
 ```
 # Transformed Data
 
 ## Log Transformations
-While we did observe some linearity in our intitial plots, our plots still contained some curviture and we still observed nonconstancy of the error terms. We then sought to transform our data so that it would be more linear and have consistant normality or errors. We approached this by taking the log of both our response and explanatory variables. 
+While we did observe some linearity in our intitial plots, our plots still contained some curviture and we still observed nonconstancy of the error terms. We then sought to transform our data so that it would be more linear and have consistant normality or errors. We approached this by taking the squareroot of both our response and explanatory variables. 
 
 ```{r , fig.cap = "Transformed Residual and Scatter plots for the model predicting total damage dealt from gold earned on the blue team for 10,000 Gold-ranked matches.",echo=FALSE}
 LogXY<-lol10 %>%
-  ggplot(aes(x=log(b_gold_earned),y=log(b_total_damage_dealt)))+
+  ggplot(aes(x=sqrt(b_gold_earned),y=sqrt(b_total_damage_dealt)))+
   geom_point()+
-  labs(x = "Log Gold Earned", y="Log Total Damage Dealt")+
-  ggtitle("LogTransformedPlot") 
-RLogXY<-lolmodel %>%
-  ggplot(aes(x=lolmodel$fitted.values ,y= lolmodel$residuals))+
+  labs(x = "Root Gold Earned", y="Root Total Damage Dealt")+
+  ggtitle("RootTransformedPlot") +
+  geom_point() +
+  stat_smooth(method = "lm", col = "red")
+RLogXY<-lolmodelT %>%
+  ggplot(aes(x=(lolmodelT$fitted.values) ,y= lolmodelT$residuals))+
   geom_point()+
-  labs(x = "Log Predicted values of total damage dealt", y=" Residuals") + geom_hline(yintercept=0, linetype="dashed", color = "red")+
-  ggtitle("LogTransformedResidualPlot") 
+  labs(x = "Root Predicted values of total damage dealt", y=" Residuals") + geom_hline(yintercept=0, linetype="dashed", color = "red")+
+  ggtitle("RootTransformedResidualPlot") 
 LogXY+RLogXY
 
 ```
+From transforming and plotting our data we see that the data is much more linear and has less curviture and that the residual vs predicted plots remains largely the same in terms of shape. While our scatter plot now is linear and has constancy of the error terms, when we look at the residual plot of the transformed data, it maintains the same shape as before the transformation of the data. The residual plot maintains clustered shape which indicates that the model is not fit for regression as when we look at residual plots we look for random scatter of points.
+
+When looking at the $R^2$ value for the transformed model we find that is it 0.9239 indicating that 92% of the variability in $\sqrt{\text{Total Damage Dealt}}$ can be explained by  $\sqrt{\text{Total Gold Earned}}$. We can now choose to look at the confidence intervals for the mean and individual response at $X=200$ which is the center of our possible values for X. We found that the confidence interval for the mean response is (-145.5236,-135.665	) and for the individual response at X=200 is (-224.1521,-57.03654) meaning we are 95% confident that our true $\sqrt{\text{Total Damage Dealt}}$ lies within this interval.
+While this does suggest a correlation between the variables, and the confidence interval for $\beta_1$ suggest that there is a linear relationship between our variables, the residual plot suggests otherwise. The residual plot is clustered when we would expect it to be random and scattered if the model was a good fit for regression. This indicates that a linear model would not be appropriate for this data. 
 
 
+```{r,echo=FALSE, results='hide'}
+summary(lolmodelT)
+
+
+lolmodelT%>%
+  augment(newdata = data.frame(b_gold_earned=200), interval = "confidence")
+  
+lolmodelT%>%
+  augment(newdata = data.frame(b_gold_earned=200), interval = "prediction")
+  
+```
+# Conclusion
+Through looking at our residual plots for both transformed and untransformed data we have come to the conclusion that a linear model is not appropriate for this data. This was interesting as the intital plot of the data looked linear before and after transformation and because our interval for $\beta_1$ suggested a linear relationship. Despite this our residual plots turned out to be clustered and the opposite of what a good linear model would look like. The data initially was what we would expect, the better a player did, indicated by the amount of gold they earned through out a game, the better they did in a match, indicated by the amount of damage they outputted. We are curious about the relationship that exist with the variables chosen in the data still, if a linear model isn't appropriate to measure this relationship, we wonder what kind of model would be best to showcase and explore this relationship.
+
+# Bibliography {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\noindent
+<div id="refs"></div>
+
+# Descriptions of Variables
 
 | Variable 	| Description 	|
 |---	|---	|
@@ -150,3 +183,4 @@ LogXY+RLogXY
 | r_summoner4_total_damage_dealt 	| The total damage dealt by summoner 4 on the red side of the map. 	|
 | r_summoner5_total_damage_dealt 	| The total damage dealt by summoner 5 on the red side of the map. 	|
 : Variables and their descriptions
+
