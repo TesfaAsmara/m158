@@ -1,6 +1,6 @@
 ---
 title: "Math158_Semesterproject_part3_MLR"
-author: "Kevin Loun"
+author: "Kevin Loun & Tesfa Asmara"
 date: "4/3/2022"
 output: pdf_document
 ---
@@ -17,7 +17,6 @@ library(broom)
 knitr::opts_chunk$set(fig.pos="H", out.extra="")
 library(patchwork)  # to get the plots next to one another
 library(GGally)
-library(dplyr)
 library(recipes)
 library(rsample)
 library(parsnip)
