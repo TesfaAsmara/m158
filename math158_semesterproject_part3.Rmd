@@ -48,7 +48,7 @@ lol_spec <- linear_reg() %>%
 
 #Creating a 2 recipes to clean data to needs & have to comparable models
 lol_rec1 <- 
-  recipe(b_summoner1_kills~b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=-lol_train)%>%
+  recipe(b_summoner1_kills~b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
   update_role(game_id, new_role = "id") %>%
 
 
