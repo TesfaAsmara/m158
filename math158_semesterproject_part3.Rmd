@@ -15,11 +15,13 @@ library(ggplot2)
 library(skimr)
 library(broom)
 knitr::opts_chunk$set(fig.pos="H", out.extra="")
-lol10 <- read_csv('training_data.csv')
-lol10 <- clean_names(lol10)
 library(patchwork)  # to get the plots next to one another
 library(GGally)
 library(rsample)
+library(parsnip)
+library(dplyr)
+library(workflows)
+library(recipes)
 ```
 
 # Introduction
@@ -28,24 +30,34 @@ The dataset for this project contains 10,000 League of Legends ranked matches fr
 For this part of the project, the following variables are of interest: `lane`, `deaths`, `gold earned`, and `total damage dealt` with the goal of predicting the amount of `kills`a player recieves during a game. A figure including all the relevant variables and their description is attached at the end.
 
 ```{r, echo=FALSE}
+#Import data and clean column names
+lol10 <- read_csv('training_data.csv')
+lol10 <- clean_names(lol10)
+```
+
+```{r, echo=FALSE}
 #Initial Data Split
 set.seed(123)
 lol_split <- initial_split(lol10)
 lol_train <- training(lol_split)
 lol_test  <- testing(lol_split)
-
+#clean_names(lol_train)
 #Setting model/engine
 lol_spec <- linear_reg() %>%
   set_engine("lm")
 
-#Creating a recipe to clean data to needs
+#Creating a 2 recipes to clean data to needs & have to comparable models
+lol_rec1 <- 
+  recipe(b_summoner1_kills~b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=-lol_train)%>%
+  update_role(game_id, new_role = "id") %>%
 
 
-
-
+lol_rec2 <- recipe(b_summoner1_kills~b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
+update_role(game_id, new_role = "id") %>%
+  
 # Generate gg plot of training data to find potential correlation
 pairsplot <-lol10 %>%
- ggpairs(data=., columns = c('b_summoner1_kills','b_summoner1_total_damage_dealt','b_summoner1_gold_earned','b_summoner1_deaths','b_summoner1_role'),
-columnLabels = c("Summoner Kills", "Total Damage Dealt","Gold Earned","Summoner Deaths","Summoner Role"))
+ ggpairs(data=., columns = c('b_summoner1_kills','b_summoner1_total_damage_dealt','b_summoner1_gold_earned','b_summoner1_deaths','b_summoner1_lane'),
+columnLabels = c("Summoner Kills", "Total Damage Dealt","Gold Earned","Summoner Deaths","Summoner Lane"))
 pairsplot
 ```
