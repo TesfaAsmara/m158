@@ -47,15 +47,20 @@ lol_spec <- linear_reg() %>%
   set_engine("lm")
 
 #Creating a 2 recipes to clean data to needs & have to comparable models
-lol_rec1 <- recipe(b_summoner1_kills~game_id+b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
+
+##Recipe that only removes 0 variance predictors and creates dummy variables
+lol_rec1 <- 
+  recipe(b_summoner1_kills~game_id+b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
   update_role(game_id, new_role = "id")%>%
-  step_dummy(all_nominal_predictors())
+  step_dummy(all_nominal_predictors())%>%
+  step_zv(all_predictors())
 
-
+##Recipe that does the same as Recipe 1 and creates interaction variables between two variables that have a high correlation
 lol_rec2 <- recipe(b_summoner1_kills~game_id+b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
   update_role(game_id, new_role = "id")%>%
-  step_dummy(all_nominal_predictors())
-
+  step_dummy(all_nominal_predictors())%>%
+  step_zv(all_predictors())%>%
+  step_interact(terms=~b_summoner1_total_damage_dealt:b_summoner1_gold_earned)
 
 
 # Generate gg plot of training data to find potential correlation
