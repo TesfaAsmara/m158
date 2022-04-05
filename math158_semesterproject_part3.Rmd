@@ -17,11 +17,12 @@ library(broom)
 knitr::opts_chunk$set(fig.pos="H", out.extra="")
 library(patchwork)  # to get the plots next to one another
 library(GGally)
+library(dplyr)
+library(recipes)
 library(rsample)
 library(parsnip)
-library(dplyr)
 library(workflows)
-library(recipes)
+
 ```
 
 # Introduction
@@ -63,8 +64,42 @@ lol_rec2 <- recipe(b_summoner1_kills~game_id+b_summoner1_total_damage_dealt+b_su
   step_interact(terms=~b_summoner1_total_damage_dealt:b_summoner1_gold_earned)
 
 
+#Creating Workflows
+lol_wflow1 <- workflow() %>%
+  add_model(lol_spec) %>%
+  add_recipe(lol_rec1)
+
+lol_wflow2 <- workflow() %>%
+  add_model(lol_spec) %>%
+  add_recipe(lol_rec2)
+
+#Fitting the data
+lol_fit1 <- lol_wflow1 %>%
+  fit(data = lol_train)
+lol_fit1%>%tidy()
+lol_fit1%>%glance()
+
+lol_fit2 <- lol_wflow2 %>%
+  fit(data = lol_train)
+lol_fit2%>%tidy()
+lol_fit2%>%glance()
+
+#Cross Validation with 5 Folds
+set.seed(47)
+folds <- vfold_cv(lol_train, v = 5)
+
+lol_fit_rs1 <- lol_wflow1 %>%
+  fit_resamples(folds)
+
+lol_fit_rs2 <- lol_wflow2 %>%
+  fit_resamples(folds)
+
+
+```
+
+```{r, echo=FALSE}
 # Generate gg plot of training data to find potential correlation
-pairsplot <-lol10 %>%
+pairsplot <-lol_train %>%
  ggpairs(data=., columns = c('b_summoner1_kills','b_summoner1_total_damage_dealt','b_summoner1_gold_earned','b_summoner1_deaths','b_summoner1_lane'),
 columnLabels = c("Summoner Kills", "Total Damage Dealt","Gold Earned","Summoner Deaths","Summoner Lane"))
 pairsplot
