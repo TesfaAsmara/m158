@@ -48,13 +48,16 @@ lol_spec <- linear_reg() %>%
 
 #Creating a 2 recipes to clean data to needs & have to comparable models
 lol_rec1 <- 
-  recipe(b_summoner1_kills~b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=-lol_train)%>%
-  update_role(game_id, new_role = "id") %>%
+  recipe(b_summoner1_kills~game_id+b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
+  update_role(game_id, new_role = "id")%>%
+  step_dummy(all_nominal_predictors())
 
 
-lol_rec2 <- recipe(b_summoner1_kills~b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
-update_role(game_id, new_role = "id") %>%
-  
+lol_rec2 <- recipe(b_summoner1_kills~game_id+b_summoner1_total_damage_dealt+b_summoner1_gold_earned+b_summoner1_deaths+b_summoner1_lane,data=lol_train)%>%
+  update_role(game_id, new_role = "id")%>%
+  step_dummy(all_nominal_predictors())
+
+
 # Generate gg plot of training data to find potential correlation
 pairsplot <-lol10 %>%
  ggpairs(data=., columns = c('b_summoner1_kills','b_summoner1_total_damage_dealt','b_summoner1_gold_earned','b_summoner1_deaths','b_summoner1_lane'),
