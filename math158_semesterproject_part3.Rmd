@@ -125,7 +125,7 @@ lol_fit_rs2 <- lol_wflow2 %>%
 collect_metrics(lol_fit_rs2)
 ```
 ## Fitting Model to Test
-Since our second model had a smaller RSME out of the two models, we chose to fit our testing data to the second model. Our model with the test data yielded a RMSE of 2.342259	and a $R^2$ of 0.7057904 meaning that 70.5% of the variability in `b_summoner1_kills` is explained by the model from the training data. One thing to note is that it appears that our RMSE for our training data is **lower** than our training data. This indicates that there is possible sampling bias in our test data. 
+Since our second model had a smaller RSME out of the two models, we chose to fit our testing data to the second model. Our model with the test data yielded a RMSE of 2.342259	and a $R^2$ of 0.7057904 meaning that 70.5% of the variability in `b_summoner1_kills` is explained by the model from the training data. One thing to note is that it appears that our RMSE for our training data is **lower** than our training data. This indicates that there is possible sampling bias in our test data, that is the test data had observations that fir the model very well. 
 ```{r, echo=FALSE}
 #Predicting with Test data
 lol_preds <- lol_wflow2 %>%
