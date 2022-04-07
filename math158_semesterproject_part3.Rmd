@@ -49,13 +49,18 @@ lol_spec <- linear_reg() %>%
 ```
   Using computational model building, we developed two models containing some similar and different features with the goal of finding a model to best predict the number of `kills` players recieve in a game. To achieve this we split the data into a training and test set with the training set containing 75% of the initial data and the test set containing 25%.
 
-```{r, echo=FALSE,include=FALSE}
+
+# Looking for relationships
+We decided to start by look for any strong relationships and correlations between our variables using a pairsplot. Upon generating a pairplot we notice strong correlations between `b_summoner1_total_damage_dealt` and `b_summoner1_gold_earned` since they have a correlation of 0.84. This indicates that a change in one of these variables will change and affect the value of the other variables, which indicates that we should create and interaction variable using these variables. Additionally, we notice that our explanatory variable `b_summoner1_kills` is highly correlated with `b_summoner1_gold_earned` meaning that this variable may have more weight than other varibles in the model. Using these observations we can begin to choose features to be added and develop two models to compare. 
+```{r, echo=FALSE}
 # Generate gg plot of training data to find potential correlation
 pairsplot <-lol_train %>%
- ggpairs(data=., columns = c('b_summoner1_kills','b_summoner1_total_damage_dealt','b_summoner1_gold_earned','b_summoner1_deaths','b_summoner1_lane','b_summoner1_level'),
-columnLabels = c("Summoner Kills", "Total Damage Dealt","Gold Earned","Summoner Deaths","Summoner Lane","Summoner Level"))
+ ggpairs(data=., columns = c('b_summoner1_kills','b_summoner1_total_damage_dealt','b_summoner1_gold_earned','b_summoner1_deaths','b_summoner1_level'),
+columnLabels = c("Summoner Kills", "Total Damage Dealt","Gold Earned","Summoner Deaths","Summoner Level"))
 pairsplot
 ```
+
+
 ## Feature Engineering
   Based on our knowledge of the dataset and variables we decided to create two recipes that would later develop into two models. In our first recipe we decided to add minimal features: removing zero variance predictors and converting categorical data into numerical binary variables. We choose these features so that we could convert our categorical variables into a format that could better contribute to our model and we remove zero variance predictors to remove any columns that could contain all zero values.
   
@@ -103,6 +108,9 @@ lol_fit2%>%glance()
 
 ## Cross Validation and Fitting Model
 
+After creating two models, we put the models through 5-fold cross validation to determine which model would provide better predictions for our test set. Our first model, `lol_fit_rs1` has a root mean squared error of 2.357 and a $R^2$ of 0.708 meaning that 70.8% of the variability in `b_summoner1_kills` can be explained by the training model. Our second model, `lol_fit_rs2` has a root mean squared error of 2.347 and a $R^2$ of 0.7110795	 meaning that 71.1% of the variability in `b_summoner1_kills` can be explained by the training model.  
+
+Since our second model yielded a smaller RSME value and a larger $R^2$ value we decided to use this model to fit our testing data. It should be noted that the difference in RSME is small and that the difference in $R^2$ could be because our second model contains more predictor variables.
 ```{r,echo=FALSE}
 #Cross Validation with 5 Folds
 set.seed(47)
@@ -115,9 +123,9 @@ collect_metrics(lol_fit_rs1)
 lol_fit_rs2 <- lol_wflow2 %>%
   fit_resamples(folds)
 collect_metrics(lol_fit_rs2)
-
 ```
-## Fitting Model to Test Data
+## Fitting Model to Test
+Since our second model had a smaller RSME out of the two models, we chose to fit our testing data to the second model. Our model with the test data yielded a RMSE of 2.342259	and a $R^2$ of 0.7057904 meaning that 70.5% of the variability in `b_summoner1_kills` is explained by the model from the training data. One thing to note is that it appears that our RMSE for our training data is **lower** than our training data. This indicates that there is possible sampling bias in our test data. 
 ```{r, echo=FALSE}
 #Predicting with Test data
 lol_preds <- lol_wflow2 %>%
