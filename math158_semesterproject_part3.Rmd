@@ -41,7 +41,7 @@ For this project, the following variables are of interest: time spent crowd cont
 We consider the following research question: 
 
 # Feature Engineering
-```{r, echo = FALSE}
+```{r echo = FALSE}
 # Read in the data
 lol10 <- read_csv(show_col_types = FALSE, 'training_data.csv')
 lol10 <- clean_names(lol10)
@@ -58,9 +58,7 @@ lol10 <- lol10 %>%
 lol10 <- lol10 %>%
   mutate(b_time_c_cing_others = b_summoner1_time_c_cing_others + b_summoner2_time_c_cing_others + b_summoner3_time_c_cing_others + b_summoner4_time_c_cing_others + b_summoner5_time_c_cing_others)
 
-# Focus on the information we're interested in
-lol10 <- lol10 %>%
-  select(b_total_damage_dealt, b_gold_earned, b_kills, b_longest_time_spent_living, b_time_c_cing_others)
+lol10 <- lol10 %>% dplyr::select(b_total_damage_dealt, b_gold_earned, b_kills, b_longest_time_spent_living, b_time_c_cing_others)
 
 # Separate the data for training and testing
 set.seed(4747)
@@ -71,7 +69,7 @@ lol10_test  <- testing(lol10_split)
 # pairs plot
 ggpairs(lol10_train)
 ```
-For $n =$ `r length(lol10_train)` observations, Table B.6 in ALSM is employed to assess whether or not the magnitude of the correlation coefficient supports the reasonableness of the normality assumption. The feature engineering we conducted was minimal.
+For $n$ = `r length(lol10_train)` observations, Table B.6 in ALSM is employed to assess whether or not the magnitude of the correlation coefficient supports the reasonableness of the normality assumption. The feature engineering we conducted was minimal.
 
 # Interaction Variables
 ```{r echo = FALSE}
@@ -158,7 +156,7 @@ reg_summary <- summary(leaps::regsubsets(b_total_damage_dealt ~ b_gold_earned + 
 # Statistical Model
 For the four predictors in the `lol10` data, we know there are $2^4 = 16$ possible models. The four-parameter model `r extract_eq(lol10_lm, wrap = TRUE, terms_per_line = 2, intercept = "beta")` is identified as best by the $R_{a, p}$ criterion; it has $\texttt{max}(R_{a, p}) =$ `r which.max(reg_summary$adjr2)` and will serve as the selected model.
 
-```{r echo = FALSE}
+```{r fig.cap = "R-squared and R-Squared Adjusted for Final Model", echo = FALSE}
 selected_lm <- lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living + b_time_c_cing_others, data = lol10_test)
 
 test_results <- selected_lm %>%
@@ -183,7 +181,19 @@ cutoff <- 4/((nrow(lol10_test)-length(selected_lm$coefficients)-2))
 plot(selected_lm, which=4, cook.levels=cutoff)
 # Influence Plot
 influencePlot(selected_lm, main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
-``` 
+```
+```{r}
+# Normality of Residuals
+# qq plot for studentized resid
+qqPlot(selected_lm, main="QQ Plot")
+# distribution of studentized residuals
+sresid <- studres(selected_lm)
+hist(sresid, freq=FALSE,
+   main="Distribution of Studentized Residuals")
+xfit<-seq(min(sresid),max(sresid),length=40)
+yfit<-dnorm(xfit)
+lines(xfit, yfit)
+```
 ```{r}
 # Evaluate Collinearity
 vif(selected_lm) # variance inflation factors
