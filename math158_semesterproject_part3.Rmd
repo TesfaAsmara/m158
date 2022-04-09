@@ -198,22 +198,42 @@ lines(xfit, yfit)
 # Evaluate Collinearity
 vif(selected_lm) # variance inflation factors
 ```
+```{r,echo=FALSE}
+#create vector of VIF values
+vif_values <- vif(selected_lm)
+
+#create horizontal bar chart to display each VIF value
+barplot(vif_values, main = "VIF Values", horiz = TRUE, col = "steelblue", cex.names=.5,las=1)
+
+#add vertical line at 5
+abline(v = 5, lwd = 3, lty = 2)
+```
 
 
-Interpret your $\beta$ coefficients to the best of your ability.
-Report the $R^2$ and Adjusted-$R^2$ values on the test data.
-A complete analysis of the residuals and influence points.
-Try to give an interpretation of the model that makes sense.
-Give CIs for a mean predicted value and a future predicted value for at least one combination of X’s (from your final linear model).
-Summarize your report.
-Add pretty language.
-Fix Variables and their descriptions table for MLR.
-Report on any relationships between the explanatory variables.
+-Interpret your $\beta$ coefficients to the best of your ability.
 
-![Variables and their descriptions](./Variables_and_their_descriptions.pdf)
+-Report the $R^2$ and Adjusted-$R^2$ values on the test data.
+
+-A complete analysis of the residuals and influence points.
+
+-Try to give an interpretation of the model that makes sense.
+
+-Give CIs for a mean predicted value and a future predicted value for at least one combination of X’s (from your final linear model).
+
+-Summarize your report.
+
+-Add pretty language.
+
+-Fix Variables and their descriptions table for MLR.
+
+-Report on any relationships between the explanatory variables.
+
 
 # Bibliography {-}
 \setlength{\parindent}{-0.2in}
 \setlength{\leftskip}{0.2in}
 \noindent
 <div id="refs"></div>
+
+
+![Variables and their descriptions](./Variable2.pdf)
