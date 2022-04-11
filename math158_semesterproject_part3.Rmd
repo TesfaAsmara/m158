@@ -38,10 +38,10 @@ The dataset for this project contains 10,000 League of Legends ranked matches fr
 For this project, the following variables are of interest: time spent crowd controlling others, map side, longest time spent living, kills, gold earned, and total damage dealt. A figure including all the relevant variables and their description is attached at the end.
 
 # Hypothesis
-We consider the following research question: 
+We consider the following research question: Are one or more of the independent variables, `b_gold_earned`, `b_kills`, `b_longest_time_spent_living`, or `b_time_c_cing_others` in the model useful in predicting the future values of `b_total_damage_dealt`?
 
 # Feature Engineering
-```{r echo = FALSE}
+```{r echo = FALSE,fig.cap = "Correlation Matrix of Variables"}
 # Read in the data
 lol10 <- read_csv(show_col_types = FALSE, 'training_data.csv')
 lol10 <- clean_names(lol10)
@@ -92,11 +92,11 @@ We compare the two models using cross-validation prediction error.
 lol10_spec <- linear_reg() %>%
   set_engine("lm")
 
-lol10_rec1 <- recipe(b_total_damage_dealt ~ b_gold_earned + b_kills, data = lol10_train) %>%
+lol10_rec1 <- recipe(b_total_damage_dealt ~ b_gold_earned + b_kills+b_time_c_cing_others, data = lol10_train) %>%
   step_dummy(all_nominal_predictors()) %>%
   step_zv(all_predictors())
 
-lol10_rec2 <- recipe(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living, data = lol10_train) %>%
+lol10_rec2 <- recipe(b_total_damage_dealt ~ b_gold_earned + b_kills +b_time_c_cing_others+ b_longest_time_spent_living, data = lol10_train) %>%
   step_dummy(all_nominal_predictors()) %>%
   step_zv(all_predictors())
 
@@ -164,40 +164,74 @@ test_results <- selected_lm %>%
 ```
 For the test data, the linear model we selected has $R^2$ = `r test_results$r.squared` and a $R^2_{adj}$ = `r test_results$adj.r.squared`. Therefore, `r (test_results$r.squared)/100`% of the variability in `b_total_damage_dealt` for players who rank Gold in the North American region is explained by the variables `b_gold_earned, b_kills, b_longest_time_spent_living, b_time_c_cing_others`.
 
-```{r}
+## Checking for Outliers
+We first apply an outlier test on our data to see if there are any significant Bonferroni P values that could indicate potential outliers in our dataset. 
+```{r, echo=FALSE}
 # Assessing Outliers
 outlierTest(selected_lm) # Bonferonni p-value for most extreme obs
-qqPlot(selected_lm, main="QQ Plot") #qq plot for studentized resid
+#qqPlot(selected_lm, main="QQ Plot") #qq plot for studentized resid
+```
+The test output shows potential outliers at observations 1700,2495,1259,1972,413,335,1857,1063,1666,and 1665. While this test is important for identifying a potentially significant outlying observation, it is not the ultimate indicator of outliers and checking for patterns in our outliers so we can proceed to generate a plot of Dfbetas to see if these points reappear as outliers. 
+```{r echo=FALSE,fig.cap = "Plots for DfBetas"}
+plotdb<-dfbetaPlots(selected_lm, id.n=3) #Dfbetas
+plotdb
+```
+We notice that the same outlying points appear on the dfbeta plots further indicating that these are outliers that could affect our model. In the leverage plot for each predictor we see a similar outcome; outliers at observation 1700 and 2495 for each predictor variable.
+
+```{r, echo=FALSE, fig.cap = "Leverage Plots for Outliers"}
 leveragePlots(selected_lm) # leverage plots
 ```
-
-```{r}
+To ensure that the outliers aren't an underlying cause of high correlation between our variables, we ploted our data in an added variable plot to visualize our outliers in plots where opur predictors are independent of one another.
+```{r echo=FALSE, fig.cap = "Added Variable Plot for each Predictor"}
 # Influential Observations
 # added variable plots
 avPlots(selected_lm)
+```
+We then chose to utilzes Cook's Distance as a metric to evaluate our outlier points. We set our cutoff value as >$\frac{4}{(n-k-1)}$ , or 0.001601922. Any observation that yields a Cook's Distance value greater than our cutoff will be considered an outlier. 
+```{r echo=FALSE, fig.cap = "Cook's Distance per Observation"}
 # Cook's D plot
 # identify D values > 4/(n-k-1)
 cutoff <- 4/((nrow(lol10_test)-length(selected_lm$coefficients)-2))
 plot(selected_lm, which=4, cook.levels=cutoff)
-# Influence Plot
-influencePlot(selected_lm, main="Influence Plot", sub="Circle size is proportial to Cook's Distance" )
 ```
-```{r}
+
+```{r,echo=FALSE, fig.cap = "Influence plot for Cook's Distance"}
+# Influence Plot
+influencePlot(selected_lm, main="Influence Plot", sub="Circle size is proportial to Cook's Distance")
+# Checking for errors in data collection, etc
+Checking<-lol10[c(496,1666,1700,2089,2495),c('b_gold_earned', 'b_kills', 'b_longest_time_spent_living','b_time_c_cing_others','b_total_damage_dealt')]
+```
+Based on the influence plot and our cutoff value, we can identify observations 496, 1666,1700,2089,and 2495 as outliers, and after checking to ensure that these observations being outliers were not a result of data errors or misformulated regression, we have decided to remove these outliers from our data. 
+
+After removing the outliers from the data we can plot our studentized residuals in the form of a QQ plot and a histogram for datasets with and without the outliers. We noticed that without the outlier points our QQ plot appears more normal, though not perfect and that the shape of our histogram remains largely the same.
+```{r echo=FALSE,fig.cap ="QQ Plot and Distribution of Studentized Residuals"}
 # Normality of Residuals
 # qq plot for studentized resid
 qqPlot(selected_lm, main="QQ Plot")
+qqPlot(edited_lm, main="QQ Plot")
+#edited_lm drops outliers
 # distribution of studentized residuals
-sresid <- studres(selected_lm)
-hist(sresid, freq=FALSE,
+sresid1 <- studres(selected_lm)
+sresid2 <- studres(edited_lm)
+hist(sresid1, freq=FALSE,
+   main="Distribution of Studentized Residuals")
+xfit<-seq(min(sresid),max(sresid),length=40)
+yfit<-dnorm(xfit)
+lines(xfit, yfit)
+
+hist(sresid2, freq=FALSE,
    main="Distribution of Studentized Residuals")
 xfit<-seq(min(sresid),max(sresid),length=40)
 yfit<-dnorm(xfit)
 lines(xfit, yfit)
 ```
-```{r}
+
+## Checking For Multicollinerity
+```{r, echo=FALSE}
 # Evaluate Collinearity
 vif(selected_lm) # variance inflation factors
 ```
+
 ```{r,echo=FALSE}
 #create vector of VIF values
 vif_values <- vif(selected_lm)
@@ -214,7 +248,7 @@ abline(v = 5, lwd = 3, lty = 2)
 
 -Report the $R^2$ and Adjusted-$R^2$ values on the test data.
 
--A complete analysis of the residuals and influence points.
+-A complete analysis of the residuals and influence points./
 
 -Try to give an interpretation of the model that makes sense.
 
@@ -224,7 +258,7 @@ abline(v = 5, lwd = 3, lty = 2)
 
 -Add pretty language.
 
--Fix Variables and their descriptions table for MLR.
+-Fix Variables and their descriptions table for MLR./
 
 -Report on any relationships between the explanatory variables.
 
