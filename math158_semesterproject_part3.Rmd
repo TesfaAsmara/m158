@@ -162,9 +162,34 @@ selected_lm <- lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_tim
 test_results <- selected_lm %>%
   glance()
 ```
-For the test data, the linear model we selected has $R^2$ = `r test_results$r.squared` and a $R^2_{adj}$ = `r test_results$adj.r.squared`. Therefore, `r (test_results$r.squared)/100`% of the variability in `b_total_damage_dealt` for players who rank Gold in the North American region is explained by the variables `b_gold_earned, b_kills, b_longest_time_spent_living, b_time_c_cing_others`.
+For the test data, the linear model we selected has $R^2$ = `r test_results$r.squared` and a $R^2_{adj}$ = `r test_results$adj.r.squared`. Therefore, `r (test_results$r.squared)/100`% of the variability in `b_total_damage_dealt` for players who rank Gold in the North American region is explained by the variables `b_gold_earned`, `b_kills`, `b_longest_time_spent_living`, `b_time_c_cing_others`. However, this $R^2$ is not a guarantee that our model will accurately describe the population. We have a relatively high $R^2$ value but this simply shows that the variables explain the variability but $R^2$ is easilly influenced by bias and can also be simply affected by the number of predictor variables in a model. So while $R^2$ is a good starting point it is not a guarantee that our model will be accurate to the population.
 
-## Checking for Outliers
+## Beta interpretation and Mean Value Confidence Interval
+When looking closer at the $\beta{}$ coefficients of our model we can evaluate our coefficients based on their p-calue to determine if they are significant. Upon closer inspection it appears that `b_longest_time_spent_living` and `b_time_c_cing_others` are not significant in our final model. They have p-values of 0.208 and .608 respectively. We set our $\alpha{}$ to be 0.05 and as such these coefficients are not significant, however, `b_gold_earned` and `b_kills` are significant as they have p-values lower than our threshold.  
+```{r echo=FALSE}
+summary(selected_lm)%>%
+  tidy()
+```
+```{r echo=FALSE, include=FALSE}
+CI <-selected_lm%>%
+  augment(interval="confidence")
+CI
+mean(CI$.lower)
+mean(CI$.upper)
+```
+The 95% Confidence interval for total damage dealt for summoners on the blue side is (546714,555966) meaning that we are 95% confident that the true mean value of total damage dealt is between(546714,555966). A future predicted value for a combination of X's can be seen using the following combination of X's: 
+```{r, echo=FALSE}
+df <- data.frame("b_kills"=20, "b_gold_earned" = 55000, "b_longest_time_spent_living" = 60,"b_time_c_cing_others"=15, stringsAsFactors = FALSE)
+df
+```
+And Once we apply the model we see that the new predicted value for future data containing similar values is:
+```{r echo=FALSE}
+predict(selected_lm,newdata=df)
+```
+## Model Interpretation 
+The final model we selected indicates that `b_total_damage_dealt` can be predicted by `b_gold_earned`, `b_kills`, `b_longest_time_spent_living`, `b_time_c_cing_others`. Initially we began with a model that included interactions between these variables but they were insignificant and were dropped from the model. These were most likely non-significant because changing one variable did not have a strong affect on any other variable, that is an increase or decrease in one variable did not result in an increase or decrease in any other variabilty. There seems to be a high correlation between `b_gold_earned`and `b_kills` which can indicate multicollinearity or that one of these variables can take the place of each other. This issue of multicollinearity will be addressed through a Variance Inflation Factor test further in this report.
+
+# Checking for Outliers
 We first apply an outlier test on our data to see if there are any significant Bonferroni P values that could indicate potential outliers in our dataset. 
 ```{r, echo=FALSE}
 # Assessing Outliers
@@ -203,11 +228,14 @@ Checking<-lol10[c(496,1666,1700,2089,2495),c('b_gold_earned', 'b_kills', 'b_long
 ```
 Based on the influence plot and our cutoff value, we can identify observations 496, 1666,1700,2089,and 2495 as outliers, and after checking to ensure that these observations being outliers were not a result of data errors or misformulated regression, we have decided to remove these outliers from our data. 
 
-After removing the outliers from the data we can plot our studentized residuals in the form of a QQ plot and a histogram for datasets with and without the outliers. We noticed that without the outlier points our QQ plot appears more normal, though not perfect and that the shape of our histogram remains largely the same.
+After removing the outliers from the data we can plot our studentized residuals in the form of a QQ plot and a histogram for datasets with and without the outliers. We noticed that without the outlier points our QQ plot appears more normal, though not perfect and that the shape of our histogram appears more normal than before droping the outliers.
 ```{r echo=FALSE,fig.cap ="QQ Plot and Distribution of Studentized Residuals"}
 # Normality of Residuals
 # qq plot for studentized resid
 qqPlot(selected_lm, main="QQ Plot")
+lol10_dropped<-lol10_test[-c(496,1666,1700,2089,2495,1259,1972,413,335,1857,1063,1659), ] #Drop outliers
+edited_lm <-lm(formula = b_total_damage_dealt ~ b_gold_earned + b_kills + 
+    b_longest_time_spent_living + b_time_c_cing_others, data = lol10_dropped)
 qqPlot(edited_lm, main="QQ Plot")
 #edited_lm drops outliers
 # distribution of studentized residuals
@@ -215,18 +243,19 @@ sresid1 <- studres(selected_lm)
 sresid2 <- studres(edited_lm)
 hist(sresid1, freq=FALSE,
    main="Distribution of Studentized Residuals")
-xfit<-seq(min(sresid),max(sresid),length=40)
+xfit<-seq(min(sresid1),max(sresid1),length=40)
 yfit<-dnorm(xfit)
 lines(xfit, yfit)
 
 hist(sresid2, freq=FALSE,
    main="Distribution of Studentized Residuals")
-xfit<-seq(min(sresid),max(sresid),length=40)
+xfit<-seq(min(sresid2),max(sresid2),length=40)
 yfit<-dnorm(xfit)
 lines(xfit, yfit)
 ```
 
 ## Checking For Multicollinerity
+In the correlation matrix generated earlier their appeared to be high correlation between some of our predictor variables; high correlation between predictor variables implies that there may be multicollinearity present in our model. To asses whether there really is multicollinearity we use the Variance Inflation factor for each variable. 
 ```{r, echo=FALSE}
 # Evaluate Collinearity
 vif(selected_lm) # variance inflation factors
@@ -239,29 +268,12 @@ vif_values <- vif(selected_lm)
 #create horizontal bar chart to display each VIF value
 barplot(vif_values, main = "VIF Values", horiz = TRUE, col = "steelblue", cex.names=.5,las=1)
 
-#add vertical line at 5
-abline(v = 5, lwd = 3, lty = 2)
 ```
+We set our cutoff for VIF values at $VIF=>10$ and for our predictor variables the highest VIF was 5.308366 meaning that there is likely no multicollinearity occuring in our model.
 
 
--Interpret your $\beta$ coefficients to the best of your ability.
-
--Report the $R^2$ and Adjusted-$R^2$ values on the test data.
-
--A complete analysis of the residuals and influence points./
-
--Try to give an interpretation of the model that makes sense.
-
--Give CIs for a mean predicted value and a future predicted value for at least one combination of X’s (from your final linear model).
-
--Summarize your report.
-
--Add pretty language.
-
--Fix Variables and their descriptions table for MLR./
-
--Report on any relationships between the explanatory variables.
-
+# Summary 
+We initially began by considering the following research question: Are one or more of the independent variables, `b_gold_earned`, `b_kills`, `b_longest_time_spent_living`, or `b_time_c_cing_others` in the model useful in predicting the future values of `b_total_damage_dealt`? We first began asnwering this question by assesing whether any feature engineering or interaction variables were neccessary in our model. We found that based on Table B.6 in ALSM that no feature engineering was needed. Through an F-test we found that non of the interaction variables were significant enough to add to our model. We then chose to approach the question through the use of a computational and statistical model. After comparing both models we concluded that the statistical model was the best choice for answering our question. We then proceeded to asses our data for any outliers that could affect our model; we accomplished this by using metrics such as: studentizeed residuals, cook's distance, dfbetas, and leverage. The outliers identified were not a result of data errors or misformulated regression so they were dropped from the data which in the end made the data more normal. Finally, a test for multicollinearity was applied due to a high correlation between variables. It was found that based on our cutoff value, no multicollinearity was present in our data. 
 
 # Bibliography {-}
 \setlength{\parindent}{-0.2in}
