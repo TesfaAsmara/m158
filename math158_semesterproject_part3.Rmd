@@ -92,7 +92,7 @@ results <- anova(lol10_lm, lol10_i_lm)
 Since $F \approx$ `r unlist(results["F"])[2]` (p-value $\approx$ `r unlist(results["Pr(>F)"])[2]`), we reject the null hypothesis $H_0: \beta_5 = \beta_6 = \beta_7 = \beta_8 = \beta_9 = \beta_{10} = 0$ at the $\alpha = 0.05$ level of significance. This means that the interaction terms do not contribute significant information to the `b_total_damage_dealt` once the explanatory variables `b_gold_earned, b_kills, b_longest_time_spent_living,` and `b_time_c_cing_others` have been taken into consideration.
 
 # Computational Model
-As mentioned in the introduction, one way that players collect gold is by killing enemies. Players can use the gold that they earn to purchase more items. These items are choosen such that they synergize with and enchance the champions and abilities so as to favor some strategy. A common strategy that is employed is to use the gold that a player earns to buy powerful items that increase that amount of damage your champion can deal. From highlight clips of gameplay, time spent CCing others may affect the amount of damage your champion can deal. This is because the ability to directly hinder a unit's ability to fight makes it easier not only for the player that has casted that ability to sequence a chain of further actions in the time that the affected player is unable to act, but also for that player's teammates follow up with their own actions. Hence, from our domain experience, we consider the following parsiminous models: `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")` and `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")`.
+As mentioned in the introduction, one way that players collect gold is by killing enemies. Players can use the gold that they earn to purchase more items. These items are choosen such that they synergize with and enchance the champions and abilities so as to favor some strategy. A common strategy that is employed is to use the gold that a player earns to buy powerful items that increase the amount of damage your champion can deal. From highlight clips of gameplay, time spent CCing others may affect the amount of damage your champion can deal. This is because the ability to directly hinder a unit's ability to fight makes it easier not only for the player that has casted that ability to sequence a chain of further actions in the time that the affected player is unable to act, but also for that player's teammates follow up with their own actions. Hence, from our domain experience, we consider the following parsiminous models: `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")` and `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")`.
 ```{r echo = FALSE}
 lol10_spec <- linear_reg() %>%
   set_engine("lm")
@@ -150,9 +150,7 @@ lol10_train_summary <- lol10_train %>%
     sd = sd(b_total_damage_dealt)
   )
 ```
-In comparing which model is better, the CV RMSE provides information on how well the model did predicting each $1/v$, where $v = \text{the number of folds}$, hold out sample. We can compare the model RMSE to the original variability seen in the `b_total_damage_dealt` variable. The original variability (measured by standard deviation) of `b_total_damage_dealt` was `r lol10_train_summary$sd`. After running Model 1, the remaining variability (measured by RMSE averaged over the folds) is `r cv_metrics1_summary$sd`; after running Model 2, the remaining variability (measured by RMSE averaged over the folds) is `r cv_metrics2_summary$sd`.
-
-Hence, the better computational model is `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")`.
+In comparing which model is better, the CV RMSE provides information on how well the model did predicting each $1/v$, where $v = \text{the number of folds}$, hold out sample. We can compare the model RMSE to the original variability seen in the `b_total_damage_dealt` variable. The original variability (measured by standard deviation) of `b_total_damage_dealt` was `r lol10_train_summary$sd`. After running Model 1, the remaining variability (measured by RMSE averaged over the folds) is `r cv_metrics1_summary$sd`; after running Model 2, the remaining variability (measured by RMSE averaged over the folds) is `r cv_metrics2_summary$sd`. Hence, the better computational model is `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")`.
 ```{r echo = FALSE}
 reg_summary <- summary(leaps::regsubsets(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living + b_time_c_cing_others, data=lol10_train))
 ```
@@ -208,7 +206,7 @@ for (i in 1:nrow(selected_lm_augment)) {
 }
 outliers_count
 ```
-Plotting of semistudentized residuals is particularly helpful for distinguishing outlying observations, since it then becomes easy to identify residuals that lie many standard deviations from zero. A rough rule of thumb when the number of cases is large is to consider semistudentized residuals with absolute value of four or more to be outliers. By this rule of thumb, about `r outliers_count/length(lol10_test$b_total_damage_dealt)*100` of the cases are outliers. This leads us to discuss other tests to aid in evaluating outliers.
+Plotting of semistudentized residuals is particularly helpful for distinguishing outlying observations, since it then becomes easy to identify residuals that lie many standard deviations from zero. A rough rule of thumb when the number of cases is large is to consider semistudentized residuals with absolute value of four or more to be outliers. By this rule of thumb, about `r outliers_count/length(lol10_test$b_total_damage_dealt)*100`% of the cases are outliers. This leads us to discuss other tests to aid in evaluating outliers.
 ```{r fig.cap = "Left: Leverage Scatter Plot; Middle: Semi-Studentized Scatter Plot; Right: Outlier Scatter Plot", echo = FALSE}
 
 
@@ -388,7 +386,6 @@ Our model is of type $p - 1$ variables, where $p = 5$. We say $p - 1$ instead of
 # Evaluate Collinearity
 vif(selected_lm) # variance inflation factors
 ```
-
 # Confidence and Prediction Intervals
 We can now choose to look at the confidence intervals for the mean and individual response for a game with 34 `b_kills`, 368654 `b_gold_earned`, 216 `b_time_c_cing_others`, and 4392 `b_longest_time_spent_living`. We found that the confidence interval for the mean response and individual response is  and , respectively. This means that we are 95% confident that our true `b_total_damage_dealt` lies within this interval.
 
@@ -401,7 +398,6 @@ predict(selected_lm, newdata = data.frame(b_kills= 34, b_gold_earned = 368654, b
 ```{r echo = FALSE, eval = FALSE}
 predict(selected_lm, newdata = data.frame(b_kills= 34, b_gold_earned = 368654, b_time_c_cing_others = 216, b_longest_time_spent_living = 4392), interval = "prediction")
 ```
-
 # Summary
 Our final linear model is `r extract_eq(selected_lm, wrap = TRUE, terms_per_line = 2, intercept = "beta", use_coefs = TRUE)`. This betters our understanding of the research question we began with: Are one or more of the independent variables, `b_gold_earned`, `b_kills`, `b_longest_time_spent_living`, or `b_time_c_cing_others` in the model useful in predicting the future values of `b_total_damage_dealt`? We first assessed whether any feature engineering had to be performed or interaction variables were neccessary in our model. We found that based on Table B.6 in ALSM that no feature engineering was needed. Through a partial F-test, we found that no interaction variables provided additional significant information to our model. We then chose to construct a computational and statistical model. After comparing both models, we concluded that the statistical model was the best model for answering our question, according to the $R^2_{a,p}$ criterion. We then analyzed the test data for any outliers that could affect our model by using metrics such as: semistudentized residuals, studentized residuals, Cook's distance, dffits, dfbetas, and leverage. A test for multicollinearity was applied due to a high correlation between variables. The test indicated that multicollinearity may not be unduly influencing the least squares estimates. 
 
