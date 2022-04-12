@@ -34,25 +34,18 @@ library(olsrr)
 ```
 
 # Introduction
-League of Legends (abbreviated LOL) is a multiplayer online battle arena video game
-developed and published by Riot Games. It has been one of the most popular video games since
-its release in 2009. In LOL, there are two teams of 5 players battle against each other in the
-Summoner's Rift, which is the main and most classical map. The goal is to be the first to
-destroy the opposing team’s “Nexus”, a structure located in the heart of each teams’ base and
-protected by defensive towers. There are hundreds of champions with unique abilities waiting
-for players to choose from and to use forming various team compositions based on their
-strategies. Commonly, players collect gold by killing enemies and minions or destroy turrets.
-Players use the gold earned to purchase more powerful items and, thus, gain advantages in the
-following team fights.
+League of Legends, abbreviated as LOL, is a multiplayer online battle arena video game
+developed and published by Riot Games. It is a popular video games that released in 2009. In LOL, there are two teams of five players. The two teams battle against each other in the
+Summoner's Rift, one of the possible maps. The goal is to be the first to destroy the opposing team’s “Nexus”, a structure located in the heart of each teams’ base and protected by defensive towers. There are hundreds of champions with unique abilities for players to choose from and use to form various team compositions based on their strategies. Some of the unique abilities of the champions can be classified as crowd control. Crowd control, commonly shortened to CC, is a blanket term used in League of Legends to describe abilities or spells that remove or diminish the control a target unit has over aspects of itself, including being able to cast spells and issue movement or attack commands. As crowd control effects impact a unit's combat ability, they are essentially more specialized forms of debuffs, a status effect given to a champion, minion, or monster that negatively impacts their combat performance in some way. However, this ability to directly hinder a unit's ability to fight means that crowd control effects are often given significantly more importance in regular gameplay than normal debuffs, resulting in their special classification. Commonly, players collect gold by killing enemies, killing minions, or destroying turrets. Players can use the gold earned to purchase more powerful items and, thus, gain advantages in the following team fights.
 
 The dataset for this project contains 10,000 League of Legends ranked matches from the North American region with 775 variables offered through the Riot Games API, provided on Kaggle [@riot][@james_2020]. Each match is pulled from players who rank Gold in the League system, a ranking system that matches players of a similar skill level to play with and against each other. Amongst North American players, the Gold skill level was the second most common tier, achieved by 27.7 percent of players, or approximately 49.86 million players when considered against Riot Games' player base of 180 million [@statista_2021][@riot_tweet]. This dataset will be referred to as $\texttt{lol10}$.
 
-For this project, the following variables are of interest: time spent crowd controlling others, map side, longest time spent living, kills, gold earned, and total damage dealt. A figure including all the relevant variables and their description is attached at the end.
+For this project, the following variables are of interest: time spent crowd controlling others, longest time spent living, kills, gold earned, and total damage dealt. A figure including all the relevant variables and their description is attached at the end.
 
 # Hypothesis
-By page 214 in ALSM, a single predictor variable in the model would have provided an inadequate description since a number of key variables affect the response variable in important and distinctive ways. Furthermore, in situations of this type, we frequently find that predictions ofthe response variable based on a model containing only a single predictor variable are too imprecise to be useful. A more complex model, containing additional predictor variables, typically is more helpful in providing sufficiently precise predictions of the response variable. The method is motivated by scenarios where many variables may be simultaneously connected to an output.
-
 We consider the following research question: Can we better understand the total damage dealt for the average Gold-ranked player on the blue team? 
+
+A single predictor variable in the model would provide an inadequate description since a number of key variables affect `b_total_damage_dealt` in important and distinctive ways. Furthermore, in situations of this type, we frequently find that predictions of the response variable based on a model containing only a single predictor variable are too imprecise to be useful. A more complex model, containing additional predictor variables `b_gold_earned, b_kills, b_longest_time_spent_living,` and `b_time_c_cing_others`, typically is more helpful in providing sufficiently precise predictions of the response variable. The method is motivated by scenarios where many variables may be simultaneously connected to an output.
 
 # Feature Engineering
 ```{r echo = FALSE}
@@ -83,7 +76,7 @@ lol10_test  <- testing(lol10_split)
 # pairs plot
 ggpairs(lol10_train)
 ```
-For $n$ = `r length(lol10_train$b_total_damage_dealt)` observations, Table B.6 in ALSM is employed to assess whether or not the magnitude of the correlation coefficient supports the reasonableness of the normality assumption. The feature engineering we conducted was minimal.
+For $n$ = `r length(lol10_train$b_total_damage_dealt)` observations, Table B.6 in ALSM is employed to assess whether or not the magnitude of the correlation coefficient supports the reasonableness of the normality assumption. The feature engineering we conducted was minimal. Before partitioning into the two models, we began by summing over the explanatory variables for the five players on the blue side team to obtain statements about the explanatory variables for the blue side team as a whole. Then, we removed all zero variance predictors from the model as they do not impact our prediction for `b_total_damage_dealt`.
 
 # Interaction Variables
 ```{r echo = FALSE}
@@ -99,9 +92,7 @@ results <- anova(lol10_lm, lol10_i_lm)
 Since $F \approx$ `r unlist(results["F"])[2]` (p-value $\approx$ `r unlist(results["Pr(>F)"])[2]`), we reject the null hypothesis $H_0: \beta_5 = \beta_6 = \beta_7 = \beta_8 = \beta_9 = \beta_{10} = 0$ at the $\alpha = 0.05$ level of significance. This means that the interaction terms do not contribute significant information to the `b_total_damage_dealt` once the explanatory variables `b_gold_earned, b_kills, b_longest_time_spent_living,` and `b_time_c_cing_others` have been taken into consideration.
 
 # Computational Model
-From our domain experience, we consider the following parsiminous models: `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")` and `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")`.
-
-We compare the two models using cross-validation prediction error. 
+As mentioned in the introduction, one way that players collect gold is by killing enemies. Players can use the gold that they earn to purchase more items. These items are choosen such that they synergize with and enchance the champions and abilities so as to favor some strategy. A common strategy that is employed is to use the gold that a player earns to buy powerful items that increase that amount of damage your champion can deal. From highlight clips of gameplay, time spent CCing others may affect the amount of damage your champion can deal. This is because the ability to directly hinder a unit's ability to fight makes it easier not only for the player that has casted that ability to sequence a chain of further actions in the time that the affected player is unable to act, but also for that player's teammates follow up with their own actions. Hence, from our domain experience, we consider the following parsiminous models: `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")` and `r extract_eq(lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living, data = lol10_train), wrap = TRUE, terms_per_line = 2, intercept = "beta")`.
 ```{r echo = FALSE}
 lol10_spec <- linear_reg() %>%
   set_engine("lm")
@@ -165,7 +156,6 @@ Hence, the better computational model is `r extract_eq(lm(b_total_damage_dealt ~
 ```{r echo = FALSE}
 reg_summary <- summary(leaps::regsubsets(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living + b_time_c_cing_others, data=lol10_train))
 ```
-
 # Statistical Model
 For the four predictors in the `lol10` data, we know there are $2^4 = 16$ possible models. The adjusted coefficient of multiple determination, $R^2_{a, p}$, criterion identifies several subsets of variables for which $R^2_{a, p}$ is high. When using $R^2_{a_,p}$ as the decision criterion, we seek to eliminate or add variables depending on whether they lead to the largest improvement in $R^2_{a_,p}$ and we stop when adding or elimination of another variable does not lead to further improvement in $R^2_{a_,p}$. By this process, the four-parameter model `r extract_eq(lol10_lm, wrap = TRUE, terms_per_line = 2, intercept = "beta")` is identified as best; it has $\texttt{max}(R^2_{a, p}) =$ `r max(reg_summary$adjr2)` and will serve as the selected model. 
 
@@ -185,10 +175,9 @@ Calculated from the test data, the linear model we selected has $R^2$ = `r test_
 # Intepretation of the Coefficients
 The parameters $\beta_0, \beta_1, \beta_2, \beta_3, \beta_4$ are sometimes called partial regression coefficients because they reflect the partial effect of one predictor variable when the other predictor variable is included in the model and is held constant. Let us now consider the meaning of the regression coefficients in the selected model. 
 
-The parameter $\beta_0 =$ `r selected_lm$coefficients[1]` is the Y intercept of the regression plane. If the scope of the model includes $X_1 = X_2 = X_3 = X_4 = 0$, then $\beta_0 =$ `r selected_lm$coefficients[1]` represents the mean response $\mathbb{E}\{Y\}$ at $X_1 = X_2 = X_3 = X_4 = 0$. Otherwise, $\beta_0$ does not have any particular meaning as a separate term in the regression model.
-The parameter $\beta_1$ indicates the change in the mean response $\mathbb{E}\{Y\}$ per unit increase in $X_1$ when $X_2, X_3, X_4$ is held constant. Likewise, $\beta_2$, $\beta_3$, $\beta_4$ indicates the change in the mean response per unit increase in $X_2$ when $X_1, X_3, X_4$ is held constant, $X_3$ when $X_1, X_2, X_4$ is held constant, and $X_4$ when $X_1, X_2, X_3$ is held constant, respectively.
+The parameter $\beta_0 =$ `r selected_lm$coefficients[1]` is the $Y$-intercept of the regression plane. If the scope of the model includes $X_1 = X_2 = X_3 = X_4 = 0$, then $\beta_0 =$ `r selected_lm$coefficients[1]` represents the mean response $\mathbb{E}\{$`b_total_damage_dealt`$\}$ at `b_gold_earned` = `b_kills` = `b_longest_time_spent_living` = `b_time_c_cing_others` = 0. Otherwise, $\beta_0$ does not have any particular meaning as a separate term in the regression model. The parameter $\beta_1$ indicates the change in the mean response $\mathbb{E}\{$`b_total_damage_dealt`$\}$ per unit increase in `b_gold_earned` when `b_kills`, `b_longest_time_spent_living`, and `b_time_c_cing_others` is held constant. Likewise, $\beta_2$, $\beta_3$, $\beta_4$ indicates the change in the mean response per unit increase in `b_kills` when `b_gold_earned`, `b_longest_time_spent_living`, and `b_time_c_cing_others` is held constant, `b_longest_time_spent_living` when `b_gold_earned`, `b_kills`, and `b_time_c_cing_others` is held constant, and `b_time_c_cing_others` when `b_gold_earned`, `b_kills`, and `b_longest_time_spent_living` is held constant, respectively.
 
-We can evaluate our coefficients based on their p-value to determine if they are significant. Upon closer inspection it appears that `b_longest_time_spent_living` and `b_time_c_cing_others` are not significant in our final model. They have p-values of 0.208 and .608 respectively. We set our $\alpha$ to be 0.05 and as such these coefficients are not significant, however, `b_gold_earned` and `b_kills` are significant as they have p-values lower than our threshold.  
+We can evaluate our coefficients based on their p-value to determine if they are significant. Upon closer inspection it appears that `b_longest_time_spent_living` and `b_time_c_cing_others` are not significant in our final model. They have p-values of 0.208 and .608 respectively. At the $\alpha = 0.05$ significance level, these coefficients are not significant. However, `b_gold_earned` and `b_kills` are significant as they have p-values lower than our signifance level.  
 ```{r echo=FALSE}
 summary(selected_lm)%>%
   tidy()
@@ -198,18 +187,29 @@ summary(selected_lm)%>%
 ```{r fig.cap = "Studentized Residual Plot", echo = FALSE}
 selected_lm %>%
    augment() %>%
-  ggplot(aes(x = .fitted, y = .std.resid)) +
-  geom_point(size = .5)+
-  geom_hline(yintercept = 0, color = "red")
-```
+  ggplot(aes(x = .fitted, y = .resid/sqrt(mean(selected_lm$residuals^2)))) +
+  geom_point(size = .8, color = "blue")+
+  geom_hline(yintercept = 0, color = "red") +
+  gghighlight(abs(.resid/sqrt(mean(selected_lm$residuals^2))) >= 4) +
+  xlab(".fitted") + ylab("semistudentized residuals")
 
-
-```{r fig.cap = "Left: Leverage Scatter Plot; Right: Outlier Scatter Plot", echo = FALSE}
 selected_lm_augment <- selected_lm %>% augment() %>%
   dplyr::select(.resid, .hat, .cooksd, .std.resid) %>%
   bind_cols(rstudent = selected_lm %>% rstudent())  %>%
   bind_cols(dffits = selected_lm %>% dffits()) %>%
   bind_cols(dfbetas = selected_lm %>% dfbetas())
+
+outliers_count <- 0
+
+for (i in 1:nrow(selected_lm_augment)) {
+  if (selected_lm_augment$.resid[i]/sqrt(mean(selected_lm$residuals^2)) >= 4) {
+      outliers_count <- outliers_count + 1
+  }
+}
+outliers_count
+```
+Plotting of semistudentized residuals is particularly helpful for distinguishing outlying observations, since it then becomes easy to identify residuals that lie many standard deviations from zero. A rough rule of thumb when the number of cases is large is to consider semistudentized residuals with absolute value of four or more to be outliers. By this rule of thumb, about `r outliers_count/length(lol10_test$b_total_damage_dealt)*100` of the cases are outliers. This leads us to discuss other tests to aid in evaluating outliers.
+```{r fig.cap = "Left: Leverage Scatter Plot; Middle: Semi-Studentized Scatter Plot; Right: Outlier Scatter Plot", echo = FALSE}
 
 
 resid_outlier <- selected_lm %>%
@@ -374,9 +374,7 @@ for (i in 1:nrow(outliers_prop_clone)) {
   }
 }
 ```
-After identifying cases that are outlying with respect to their Y values and their X values, the next step is to ascertain whether or not these outlying cases are influential. A useful measure of the influence that case $i$ has on the fitted value $Y_i$ is given by $(DFFITS)_i$.
-
-The letters DF stand for the difference between the fitted value $Y_i$ for the $i$th case when all $n$ cases are used in fitting the regression function and the predicted value $Y_{i(i)}$ for the ith case obtained when the ith case is omitted in fitting the regression function. Of those cases that are outlying with respect to their Y values and their X values, `r dffits_count/nrow(outliers_prop_clone)*100`% of their $(DFFITS)_i$ values exceed our guideline of $2\sqrt{\frac{p}{n}}$ for a medium-size data set.
+After identifying cases that are outlying with respect to their Y values and their X values, the next step is to ascertain whether or not these outlying cases are influential. A useful measure of the influence that case $i$ has on the fitted value $Y_i$ is given by $(DFFITS)_i$. The letters DF stand for the difference between the fitted value $Y_i$ for the $i$th case when all $n$ cases are used in fitting the regression function and the predicted value $Y_{i(i)}$ for the ith case obtained when the ith case is omitted in fitting the regression function. Of those cases that are outlying with respect to their Y values and their X values, `r dffits_count/nrow(outliers_prop_clone)*100`% of their $(DFFITS)_i$ values exceed our guideline of $2\sqrt{\frac{p}{n}}$ for a medium-size data set.
 
 Cook's distance measure, $D_i$, considers the influence of the $i$th case on all $n$ fitted values. We consider `r cooksd_count/nrow(outliers_prop_clone)*100`% of the cases influential on the fit of the regression function because their $D_i$ values exceed or equal $1$.
 
@@ -385,9 +383,7 @@ The DFBETAS value by its sign indicates whether inclusion of a case leads to an 
 All three influence measures (DFFITS, Cook's distance, and DFBETAS) did not identify a particular case, seeing as the size of the collection of cases that exceed the threshold for all of these tests is `r overall_count`. Hence, the extent of the influence may not be large enough to call for consideration of remedial measures.
 
 # Interpretation of the Model
-Our model is of type $p - 1$ variables, where $p = 5$. We say $p - 1$ instead of $p$ because including the intercept there are $p$ parameters in need of estimation. There were four independent variables, `b_gold_earned, b_kills, b_longest_time_spent_living,` and `b_time_c_cing_others`.
-
-Initially we began with a model that included interactions between these variables but they were insignificant and were dropped from the model. These were most likely non-significant because changing one variable did not have a strong affect on any other variable, that is an increase or decrease in one variable did not result in an increase or decrease in any other variabilty. From the correlation matrix earlier, there seems to be a high correlation between `b_gold_earned` and `b_kills` which can indicate multicollinearity or that one of these variables can take the place of each other. To assess whether there really is multicollinearity we use the variance inflation factor for each variable. The variance inflation factor for each variable did not exceed our cutoff of $10$, which is taken as an indication that multicollinearity may not be unduly influencing the least squares estimates. 
+Our model is of type $p - 1$ variables, where $p = 5$. We say $p - 1$ instead of $p$ because including the intercept there are $p$ parameters in need of estimation. There were four independent variables, `b_gold_earned, b_kills, b_longest_time_spent_living,` and `b_time_c_cing_others`. From the correlation matrix earlier, there seems to be a high correlation between `b_gold_earned` and `b_kills` which can indicate multicollinearity or that one of these variables can take the place of each other. To assess whether there really is multicollinearity we use the variance inflation factor. The variance inflation factor for each variable did not exceed our cutoff of 10. This is taken as an indication that multicollinearity may not be unduly influencing the least squares estimates. 
 ```{r, echo=FALSE}
 # Evaluate Collinearity
 vif(selected_lm) # variance inflation factors
@@ -407,9 +403,7 @@ predict(selected_lm, newdata = data.frame(b_kills= 34, b_gold_earned = 368654, b
 ```
 
 # Summary
-Our final linear model is `r extract_eq(selected_lm, wrap = TRUE, terms_per_line = 2, intercept = "beta", use_coefs = TRUE)`.
-
-We initially began by considering the following research question: Are one or more of the independent variables, `b_gold_earned`, `b_kills`, `b_longest_time_spent_living`, or `b_time_c_cing_others` in the model useful in predicting the future values of `b_total_damage_dealt`? We first began asnwering this question by assesing whether any feature engineering or interaction variables were neccessary in our model. We found that based on Table B.6 in ALSM that no feature engineering was needed. Through an F-test we found that non of the interaction variables were significant enough to add to our model. We then chose to approach the question through the use of a computational and statistical model. After comparing both models we concluded that the statistical model was the best choice for answering our question. We then proceeded to asses our data for any outliers that could affect our model; we accomplished this by using metrics such as: studentizeed residuals, cook's distance, dfbetas, and leverage. The outliers identified were not a result of data errors or misformulated regression so they were dropped from the data which in the end made the data more normal. Finally, a test for multicollinearity was applied due to a high correlation between variables. It was found that based on our cutoff value, no multicollinearity was present in our data. 
+Our final linear model is `r extract_eq(selected_lm, wrap = TRUE, terms_per_line = 2, intercept = "beta", use_coefs = TRUE)`. This betters our understanding of the research question we began with: Are one or more of the independent variables, `b_gold_earned`, `b_kills`, `b_longest_time_spent_living`, or `b_time_c_cing_others` in the model useful in predicting the future values of `b_total_damage_dealt`? We first assessed whether any feature engineering had to be performed or interaction variables were neccessary in our model. We found that based on Table B.6 in ALSM that no feature engineering was needed. Through a partial F-test, we found that no interaction variables provided additional significant information to our model. We then chose to construct a computational and statistical model. After comparing both models, we concluded that the statistical model was the best model for answering our question, according to the $R^2_{a,p}$ criterion. We then analyzed the test data for any outliers that could affect our model by using metrics such as: semistudentized residuals, studentized residuals, Cook's distance, dffits, dfbetas, and leverage. A test for multicollinearity was applied due to a high correlation between variables. The test indicated that multicollinearity may not be unduly influencing the least squares estimates. 
 
 
 ![Variables and their descriptions](./Variables_and_their_descriptions_Project_3.pdf)
