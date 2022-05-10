@@ -1,0 +1,250 @@
+---
+title: "math_158_semesterproject_part4"
+author: "Kevin Loun"
+date: "5/9/2022"
+output: pdf_document
+---
+
+```{r, include=FALSE}
+library(broom)
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(tidyverse)
+library(janitor)
+library(ggridges)
+library(ggplot2)
+library(skimr)
+knitr::opts_chunk$set(fig.pos="H", out.extra="")
+library(patchwork)  # to get the plots next to one another
+library(rsample)
+library(GGally)
+library(equatiomatic)
+library(parsnip)
+library(recipes)
+library(workflows)
+library(resample)
+library(tidymodels)
+library(gghighlight)
+library(ggrepel)
+library(car)
+library(MASS)
+```
+# Introduction
+The dataset for this project contains 10,000 League of Legends ranked matches from the North American region with 775 variables offered through the Riot Games API, provided on Kaggle [@riot][@james_2020]. Each match is pulled from players who rank Gold in the League system, a ranking system that matches players of a similar skill level to play with and against each other. Amongst North American players, the Gold skill level was the second most common tier, achieved by 27.7 percent of players, or approximately 49.86 million players when considered against Riot Games' player base of 180 million [@statista_2021][@riot_tweet]. This dataset will be referred to as $\texttt{lol10}$.
+
+For this project, the following variables are of interest: time spent crowd controlling others, map side, longest time spent living, kills, gold earned, and total damage dealt. A figure including all the relevant variables and their description is attached at the end.
+
+# Normalizing Data
+```{r echo = FALSE}
+# Read in the data
+lol10 <- read_csv(show_col_types = FALSE, 'training_data.csv')
+lol10 <- clean_names(lol10)
+
+# Manipulate the data to extract the information we're interested in
+lol10 <- lol10 %>%
+  mutate(b_total_damage_dealt = b_summoner1_total_damage_dealt + b_summoner2_total_damage_dealt + b_summoner3_total_damage_dealt + b_summoner4_total_damage_dealt + b_summoner5_total_damage_dealt)
+lol10 <- lol10 %>%
+  mutate(b_gold_earned = b_summoner1_gold_earned + b_summoner2_gold_earned + b_summoner3_gold_earned + b_summoner4_gold_earned + b_summoner5_gold_earned)
+lol10 <- lol10 %>%
+  mutate(b_kills = b_summoner1_kills + b_summoner2_kills + b_summoner3_kills + b_summoner4_kills + b_summoner5_kills) 
+lol10 <- lol10 %>%
+  mutate(b_longest_time_spent_living = b_summoner1_longest_time_spent_living + b_summoner2_longest_time_spent_living + b_summoner3_longest_time_spent_living + b_summoner4_longest_time_spent_living + b_summoner5_longest_time_spent_living)
+lol10 <- lol10 %>%
+  mutate(b_time_c_cing_others = b_summoner1_time_c_cing_others + b_summoner2_time_c_cing_others + b_summoner3_time_c_cing_others + b_summoner4_time_c_cing_others + b_summoner5_time_c_cing_others)
+
+lol10 <- lol10 %>% dplyr::select(b_total_damage_dealt, b_gold_earned, b_kills, b_longest_time_spent_living, b_time_c_cing_others)
+
+# Separate the data for training and testing
+set.seed(4747)
+lol10_split <- initial_split(lol10) 
+lol10_train <- training(lol10_split)
+lol10_test  <- testing(lol10_split)
+```
+
+Since we are running a Ridge Regression and LASSO model on our data we need to ensure that our data is normalized to ensure that all variables contribute equally to the penalized coefficients in our models. 
+```{r, echo=FALSE}
+#Initial Model
+lol10_lm <- lol10_train %>%
+  lm(b_total_damage_dealt ~ b_gold_earned + b_kills +b_time_c_cing_others+ b_longest_time_spent_living, data = .)
+
+#Normalize Data Recipe
+lol10_rec <- recipe(b_total_damage_dealt ~ b_gold_earned + b_kills +b_time_c_cing_others+ b_longest_time_spent_living, data = lol10) %>%
+  step_normalize(all_numeric(), -all_outcomes())
+```
+# Ridge Regression
+
+```{r, echo=FALSE}
+# Model Specification
+ridge_spec_tune <- linear_reg(mixture = 0, penalty = tune()) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+#Workflow
+set.seed(47)
+lol10_fold <- vfold_cv(lol10_train)
+  
+ridge_grid <- grid_regular(penalty(range = c(-5, 5)), levels = 50)
+
+ridge_wf <- workflow() %>%
+  add_recipe(lol10_rec)
+
+ridge_fit <- ridge_wf %>%
+  add_model(ridge_spec_tune) %>%
+  fit(data = lol10_train)
+
+# CV Tuning
+set.seed(47)
+ridge_cv <- tune_grid(
+  ridge_wf %>% add_model(ridge_spec_tune),
+  resamples = lol10_fold,
+  grid = ridge_grid
+)
+# Averaging Metrics
+collect_metrics(ridge_cv) %>%
+  filter(.metric == "rmse") %>%
+  arrange(mean)
+
+#Plot of Metrics
+ridge_cv %>%
+  collect_metrics() %>%
+  ggplot(aes(x = penalty, y = mean, color = .metric)) + 
+  geom_errorbar(aes(
+    ymin = mean - std_err,
+    ymax = mean + std_err),
+    alpha = 0.5) + 
+  geom_line(size = 1.5) + 
+  scale_x_log10() 
+#Best Ridge
+best_rr <- select_best(ridge_cv, metric = "rmse")
+best_rr
+
+#Generate Predictions
+ridge_spec <- linear_reg(mixture = 0, penalty = 1e-05	) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+ridge_wf <- workflow() %>%
+  add_recipe(lol10_rec)
+
+ridge_fit <- ridge_wf %>%
+  add_model(ridge_spec) %>%
+  fit(data = lol10_train)
+predict(ridge_fit, new_data = lol10_test)
+```
+
+```{r}
+# Final Model
+finalize_workflow(ridge_wf %>% add_model(ridge_spec_tune), best_rr) %>%
+  fit(data = lol10_test) %>% tidy()
+```
+# LASSO Regression
+
+```{r, echo=FALSE}
+# Model Specification
+lasso_spec_tune <- linear_reg(mixture = 1, penalty = tune()) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+# CV Tuning
+lasso_grid <- grid_regular(penalty(range = c(-5, 5)), levels = 50)
+
+lasso_wf <- workflow() %>%
+  add_recipe(lol10_rec)
+
+lasso_fit <- lasso_wf %>%
+  add_model(lasso_spec_tune) %>%
+  fit(data = lol10_train)
+
+# Tuning
+set.seed(2020)
+lasso_cv <- tune_grid(
+  lasso_wf %>% add_model(lasso_spec_tune),
+  resamples = lol10_fold,
+  grid = lasso_grid
+)
+collect_metrics(lasso_cv) %>%
+  filter(.metric == "rmse") %>%
+  arrange(mean)
+
+lasso_cv %>%
+  collect_metrics() %>%
+  ggplot(aes(x = penalty, y = mean, color = .metric)) + 
+  geom_errorbar(aes(
+    ymin = mean - std_err,
+    ymax = mean + std_err),
+    alpha = 0.5) + 
+  geom_line(size = 1.5) + 
+  scale_x_log10() +
+  ylab("RMSE")
+
+# Choosing Best LASSO
+best_lasso <- select_best(lasso_cv, metric = "rmse")
+best_lasso
+
+#Generate Predictions
+lasso_spec <- linear_reg(mixture = 1, penalty = 1e-05	) %>%
+  set_mode("regression") %>%
+  set_engine("glmnet")
+
+lasso_wf <- workflow() %>%
+  add_recipe(lol10_rec)
+
+lasso_fit <- lasso_wf %>%
+  add_model(lasso_spec) %>%
+  fit(data = lol10_train)
+predict(lasso_fit, new_data = lol10_test)
+```
+
+```{r}
+# Final Model Coefficients
+finalize_workflow(lasso_wf %>% add_model(lasso_spec_tune), best_lasso) %>%
+  fit(data = lol10_test) %>% tidy()
+```
+# Comparing Models
+
+
+# Plotting Predicted vs Actual for 3 Models
+```{r}
+#MLR Model
+MLR_lm <- lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living + b_time_c_cing_others, data = lol10_test)
+ggplot() +
+  geom_point(lol10, mapping=aes(x=unlist(predict(lasso_fit,lol10)), y=b_total_damage_dealt, color = "Lasso")) +
+  geom_point(lol10, mapping=aes(x=unlist(predict(ridge_fit,lol10)), y=b_total_damage_dealt, color = "Ridge")) +
+  geom_point(lol10, mapping=aes(x=unlist(predict(MLR_lm, lol10)), y=b_total_damage_dealt, color= "MLR"))+
+  labs(x='Predicted Values', y='Actual Values', title='Predicted vs. Actual Values')
+```
+
+# Regression Spline
+
+
+
+# LoEss
+
+
+
+### TO DO
+
+~~• Introduction (briefly refresh the reader’s mind as to the variables of interest). Remember that you
+should include a reference for the original data source, and the reader should know to what population
+you are inferring your results.~~
+
+• Run both ridge regression and LASSO on the full variable set (use cross validation to find lambda).
+Compare and contrast the models (i.e., coefficients) with the final MLR model from the previous
+project assignment.
+
+~~• Make a single plot with the observed response variable on the x-axis and the predicted response
+variable on the y-axis. Overlay (using color with a legend) 3 different predictions: MLR, RR, LASSO.
+Comment on the figure.~~
+
+• Choose a single variable and run both smoothing spline and kernel smoother models. Change the
+parameters so that you have at least four different models for each method.
+
+• Plot the (8+) smoothed curves on either one plot or two plots (depending on which looks better for
+your data. Comment on the figure(s).
+
+• Without cross validating, which of the 8 smoothed models would you choose to use for future predictions? Your argument might include smoothness, interpretation of coefficients, ability to include
+variability of the predictions, etc.
+
+• A Conclusion (Summarize your results. Comment on anything of interest that occurred. Were the
+data approximately what you expected or did some of the results surprise you? What other questions
+would you like to ask about the data?)
