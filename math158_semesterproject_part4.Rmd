@@ -1,8 +1,11 @@
 ---
 title: "math_158_semesterproject_part4"
-author: "Kevin Loun"
+author: "Kevin Loun & Tesfa Asmara"
 date: "5/9/2022"
-output: pdf_document
+output:
+  bookdown::pdf_document2:
+    extra_dependencies: ["float"]
+bibliography: references.bib
 ---
 
 ```{r, include=FALSE}
@@ -34,7 +37,9 @@ The dataset for this project contains 10,000 League of Legends ranked matches fr
 
 For this project, the following variables are of interest: time spent crowd controlling others, map side, longest time spent living, kills, gold earned, and total damage dealt. A figure including all the relevant variables and their description is attached at the end.
 
-# Normalizing Data
+# Shrinkage & Smoothing Models
+
+## Normalizing Data
 ```{r echo = FALSE}
 # Read in the data
 lol10 <- read_csv(show_col_types = FALSE, 'training_data.csv')
@@ -71,9 +76,11 @@ lol10_lm <- lol10_train %>%
 lol10_rec <- recipe(b_total_damage_dealt ~ b_gold_earned + b_kills +b_time_c_cing_others+ b_longest_time_spent_living, data = lol10) %>%
   step_normalize(all_numeric(), -all_outcomes())
 ```
-# Ridge Regression
+## Ridge Regression
 
-```{r, echo=FALSE}
+Ridge Regression optimization provides a trade-off between two different criteria: variance and bias.It seeks to find coefficients that minimize the SSE of the data set. Ridge Regression attempts to shink the coeffcients in our model close to zero but does not actually remove any coeffcients. This is done using a tuning parameter $\lambda{}>0$. To develop a Ridge Regression model for our data we created a recipe that normalized our data and then used cross validation to find the penalty, $\lambda{}$ value that would best minimize the SSE of our data. After using cross validatation we found that the value of $\lambda{}$ that best minimized the SSE and our coefficients was $0.000001$. The plot bellow showcases how our MSE and $R^2$ value change as a function of $\lambda{}$ and our final ridge regression model can also be found bellow. 
+
+```{r, include=FALSE}
 # Model Specification
 ridge_spec_tune <- linear_reg(mixture = 0, penalty = tune()) %>%
   set_mode("regression") %>%
@@ -104,16 +111,6 @@ collect_metrics(ridge_cv) %>%
   filter(.metric == "rmse") %>%
   arrange(mean)
 
-#Plot of Metrics
-ridge_cv %>%
-  collect_metrics() %>%
-  ggplot(aes(x = penalty, y = mean, color = .metric)) + 
-  geom_errorbar(aes(
-    ymin = mean - std_err,
-    ymax = mean + std_err),
-    alpha = 0.5) + 
-  geom_line(size = 1.5) + 
-  scale_x_log10() 
 #Best Ridge
 best_rr <- select_best(ridge_cv, metric = "rmse")
 best_rr
@@ -132,14 +129,30 @@ ridge_fit <- ridge_wf %>%
 predict(ridge_fit, new_data = lol10_test)
 ```
 
-```{r}
+```{r echo=FALSE}
 # Final Model
 finalize_workflow(ridge_wf %>% add_model(ridge_spec_tune), best_rr) %>%
   fit(data = lol10_test) %>% tidy()
 ```
-# LASSO Regression
 
-```{r, echo=FALSE}
+```{r echo=FALSE}
+#Plot of Metrics
+ridge_cv %>%
+  collect_metrics() %>%
+  ggplot(aes(x = penalty, y = mean, color = .metric)) + 
+  geom_errorbar(aes(
+    ymin = mean - std_err,
+    ymax = mean + std_err),
+    alpha = 0.5) + 
+  geom_line(size = 1.5) + 
+  scale_x_log10() +
+  labs(title='RSME vs Lambda for RR')
+```
+
+## LASSO Regression
+
+Similar to Ridge Regression, LASSO optimization provides a trade-off between two different criteria: variance and bias.It seeks to find coefficients that minimize the SSE of the data set. LASSO attempts to shink the coeffcients in our model to zero but does not keep all predictors, only important ones. This is also done using a tuning parameter $\lambda{}>0$. To develop a LASSO model for our data we created a recipe that normalized our data and then used cross validation to find the penalty, $\lambda{}$ value that would best minimize the SSE of our data. After using cross validatation we found that the value of $\lambda{}$ that best minimized the SSE and our coefficients was also $0.000001$. The plot bellow showcases how our MSE and $R^2$ value change as a function of $\lambda{}$ and our final ridge regression model can also be found below. 
+```{r, include=FALSE}
 # Model Specification
 lasso_spec_tune <- linear_reg(mixture = 1, penalty = tune()) %>%
   set_mode("regression") %>%
@@ -195,32 +208,155 @@ lasso_fit <- lasso_wf %>%
 predict(lasso_fit, new_data = lol10_test)
 ```
 
-```{r}
+```{r echo=FALSE}
 # Final Model Coefficients
 finalize_workflow(lasso_wf %>% add_model(lasso_spec_tune), best_lasso) %>%
   fit(data = lol10_test) %>% tidy()
+#Metrics Plot
+lasso_cv %>%
+  collect_metrics() %>%
+  ggplot(aes(x = penalty, y = mean, color = .metric)) + 
+  geom_errorbar(aes(
+    ymin = mean - std_err,
+    ymax = mean + std_err),
+    alpha = 0.5) + 
+  geom_line(size = 1.5) + 
+  scale_x_log10() +
+  ylab("RMSE")+
+  labs(title='RSME vs Lambda for LASSO')
+
 ```
-# Comparing Models
 
+## Comparing Models
 
-# Plotting Predicted vs Actual for 3 Models
-```{r}
-#MLR Model
-MLR_lm <- lm(b_total_damage_dealt ~ b_gold_earned + b_kills + b_longest_time_spent_living + b_time_c_cing_others, data = lol10_test)
-ggplot() +
-  geom_point(lol10, mapping=aes(x=unlist(predict(lasso_fit,lol10)), y=b_total_damage_dealt, color = "Lasso")) +
-  geom_point(lol10, mapping=aes(x=unlist(predict(ridge_fit,lol10)), y=b_total_damage_dealt, color = "Ridge")) +
-  geom_point(lol10, mapping=aes(x=unlist(predict(MLR_lm, lol10)), y=b_total_damage_dealt, color= "MLR"))+
-  labs(x='Predicted Values', y='Actual Values', title='Predicted vs. Actual Values')
+When comparing MLR, RR, and LASSO we can look at the coefficients of the individual models. In the LASSO Model the coeffcient of `b_time_c_cing_others` has been penalized to 0 while in MLR it is a negative value with and in RR it is a large coefficient. In the MLR and LASSO model `b_kills` has a relatively large coefficient while it becomes more penalized in the RR model.  Finally, the coefficient estimate for `b_longest_time_spent_living` in MLR and LASSO are relatively small compared to RR which is odd because of how RR and LASSO penalized the coefficient differently despite using the same $\lambda{}$ value. The remaining variables appear to remain similar throughout the three models. 
+```{r include=FALSE}
+#MLR Model after normalizing
+lol10mlr_spec <- linear_reg() %>%
+  set_engine("lm")
+lol10_wflow1 <- workflow() %>%
+  add_model(lol10mlr_spec) %>%
+  add_recipe(lol10_rec)
+lol10_fit <- lol10_wflow1 %>%
+  fit(data = lol10_test)
+lol10_fit%>%tidy()
+finalize_workflow(lasso_wf %>% add_model(lasso_spec_tune), best_lasso) %>%
+  fit(data = lol10_test) %>% tidy()
+finalize_workflow(ridge_wf %>% add_model(ridge_spec_tune), best_rr) %>%
+  fit(data = lol10_test) %>% tidy()
 ```
 
-# Regression Spline
+## Plotting Predicted vs Actual for 3 Models
+
+When comparing the predictions of the MLR, Ridge Regression, and LASSO models visually we can see that the MLR and LASSO model produce predictions that are closest to the actual value of the test set while the Ridge Regression model is the least accurate. However, it should be noted that this could be due to overfitting of the models, so while the models may appear to have more predictive accuracy they may not have the same accuracy on new data. Note that smooth lines were used in place of individual points for visual clarity.
+```{r echo=FALSE}
+#Plot
+p<-ggplot()+
+  geom_smooth(lol10, mapping=aes(x=unlist(predict(lasso_fit,lol10)), y=b_total_damage_dealt, color = "Lasso"),method = 'gam') +
+  geom_smooth(lol10, mapping=aes(x=unlist(predict(ridge_fit,lol10)), y=b_total_damage_dealt, color = "Ridge"),method = 'gam') +
+  geom_smooth(lol10, mapping=aes(x=unlist(predict(lol10_fit, lol10)), y=b_total_damage_dealt, color= "MLR"),method = 'gam')+
+  geom_abline(intercept=0)+
+  labs(x='Predicted Values', y='Actual Values', title='Predicted vs. Actual Values of 3 Models')
+suppressMessages(print(p))
+```
+
+## Regression Spline
+
+In our Regression Spline Model we chose to run a model on `b_gold_earned` and `b_total_damage_dealt`. Since Regression Splines use Degrees of Freedom as the primary paramter to determine the number of knots used in the model we decided to use four different values of degrees of freedom:3,6,12,and 18. Below is a plot of the 4 Regression Spline models with data from our dataset. Visually, it appears that DF=6 produces the best model because it is not as affected by the outlier as df=12 and df=18 and it is not indiffernet to outliers as df=3 is. 
+```{r include=FALSE}
+#ggplot(lol10_train, aes(x=b_gold_earned,y=b_total_damage_dealt))+
+  #geom_point()
+require(splines)
+lol10_knot1 <- bs(lol10$b_gold_earned, df=3, degree=3)
+lol10_knot2 <- bs(lol10$b_gold_earned, df=6, degree=3)
+lol10_knot3 <- bs(lol10$b_gold_earned, df=12, degree=3)
+lol10_knot4 <- bs(lol10$b_gold_earned, df=18, degree=3)
+lol10_rs1 <- lm(b_total_damage_dealt ~ lol10_knot1, data=lol10)
+lol10_rs2 <- lm(b_total_damage_dealt ~ lol10_knot2, data=lol10)
+lol10_rs3 <- lm(b_total_damage_dealt ~ lol10_knot3, data=lol10)
+lol10_rs4 <- lm(b_total_damage_dealt ~ lol10_knot4, data=lol10)
 
 
+k1<-lol10_rs1 %>% 
+  augment(se_fit = TRUE) %>% 
+  bind_cols(lol10) %>%
+  rename(b_total_damage_dealt = b_total_damage_dealt...1) %>%
+  mutate(upper = .fitted + 2*.se.fit,
+         lower = .fitted - 2*.se.fit) 
 
-# LoEss
+k2<-lol10_rs2 %>% 
+  augment(se_fit = TRUE) %>% 
+  bind_cols(lol10) %>%
+  rename(b_total_damage_dealt = b_total_damage_dealt...1) %>%
+  mutate(upper = .fitted + 2*.se.fit,
+         lower = .fitted - 2*.se.fit) 
+
+k3<-lol10_rs3 %>% 
+  augment(se_fit = TRUE) %>% 
+  bind_cols(lol10) %>%
+  rename(b_total_damage_dealt = b_total_damage_dealt...1) %>%
+  mutate(upper = .fitted + 2*.se.fit,
+         lower = .fitted - 2*.se.fit) 
+
+k4<-lol10_rs4 %>% 
+  augment(se_fit = TRUE) %>% 
+  bind_cols(lol10) %>%
+  rename(b_total_damage_dealt = b_total_damage_dealt...1) %>%
+  mutate(upper = .fitted + 2*.se.fit,
+         lower = .fitted - 2*.se.fit) 
+```
+
+```{r, echo=FALSE}
+  ggplot(lol10, mapping=aes(x = b_gold_earned, y = b_total_damage_dealt)) + 
+  geom_point() + 
+  geom_line(k1,mapping=aes(y = .fitted, color = "3")) + 
+  #geom_line(k1,mapping=aes(y = upper), lty = 3, color = "blue") + 
+  #geom_line(k1,mapping=aes(y = lower), lty = 3, color = "blue") + 
+  geom_line(k2,mapping=aes(y = .fitted,color = "6")) + 
+  #geom_line(k2,mapping=aes(y = upper), lty = 3,color = "red") + 
+  #geom_line(k2,mapping=aes(y = lower), lty = 3,color = "red") + 
+  geom_line(k3,mapping=aes(y = .fitted,color = "12")) + 
+  #geom_line(k3,mapping=aes(y = upper), lty = 3,color = "green") + 
+  #geom_line(k3,mapping=aes(y = lower), lty = 3,color = "green")+
+  geom_line(k4,mapping=aes(y = .fitted,color = "18")) + 
+  #geom_line(k4,mapping=aes(y = upper), lty = 3,color = "purple") + 
+  #geom_line(k4,mapping=aes(y = lower), lty = 3,color = "purple")+
+  labs(color = "df")+
+  ggtitle("Regression Spline Fit")
+
+```
+
+## Loess
+
+In our Loess model we chose to run a model on `b_gold_earned` and `b_total_damage_dealt`. Since Loess models use span asa parameter to determine weights of points, we choose to use four span values to create four different models. Our span values are .3 , .6, 1.0 , and 1.5. Below is a plot of our four models and visually it appears that the best model has a span of .6 because the other models appear to affected by outlier points or indifferent to them. 
+```{r echo=FALSE}
+loess_unif <- data.frame()
+spanlist <- c(.3, .6, 1.00, 1.50)
+for (i in 1:length(spanlist))
+{
+  loess_unif_pred <- loess(b_total_damage_dealt ~ b_gold_earned, span = spanlist[i], 
+                           data = lol10) %>%
+    augment() %>%
+    mutate(span = spanlist[i])
+  
+  loess_unif <- loess_unif %>% bind_rows(loess_unif_pred)
+  
+}
+    loess_unif %>%
+      ggplot(aes(x = b_gold_earned, y = b_total_damage_dealt)) + 
+      geom_point() + 
+      geom_line(aes(x = b_gold_earned, y = .fitted, color = as.factor(span))) + 
+      labs(color = "span") + 
+      ggtitle("Loess for Different Spans")
 
 
+```
+
+## Best Smooth Model
+
+
+## Conclusion
+After building or MLR model, we began to look at our data through Shrinkage and Smoothing methods, as such we built and fitted our data to Ridge Regression, LASSO, Regression Spline, and Loess Models. We found that interestingly in our LASSO and Ridge Regression models our MSE did not change much with a change in our penalty value until large values of $\lambda{}$ which interested us because it made us wonder if this was simply due to our data or if it was because we had mutated our variables. When comparing MLR, LASSO, and Ridge Regression we found that there were significant differences in the coefficients estimated by the three models, but when compared visually MLR and LASSO had very similar predictive accuracy while Ridge Regression appeared the least accurate. When looking at our  Smoothing models individually, we found that our Ridge Rrgression model using degrees of freedom 6 and Loess model uwing a span of .6 to be the best models for our data. Based on our results we would ask the question: would the results of our Shrinkage models be different if we had not mutated our data but instead used our initial data, and would it have been different if we had used more data from the initial data set?
 
 ### TO DO
 
@@ -228,19 +364,19 @@ ggplot() +
 should include a reference for the original data source, and the reader should know to what population
 you are inferring your results.~~
 
-• Run both ridge regression and LASSO on the full variable set (use cross validation to find lambda).
+~~• Run both ridge regression and LASSO on the full variable set (use cross validation to find lambda).
 Compare and contrast the models (i.e., coefficients) with the final MLR model from the previous
-project assignment.
+project assignment.~~
 
 ~~• Make a single plot with the observed response variable on the x-axis and the predicted response
 variable on the y-axis. Overlay (using color with a legend) 3 different predictions: MLR, RR, LASSO.
 Comment on the figure.~~
 
-• Choose a single variable and run both smoothing spline and kernel smoother models. Change the
-parameters so that you have at least four different models for each method.
+~~• Choose a single variable and run both smoothing spline and kernel smoother models. Change the
+parameters so that you have at least four different models for each method.~~
 
-• Plot the (8+) smoothed curves on either one plot or two plots (depending on which looks better for
-your data. Comment on the figure(s).
+~~• Plot the (8+) smoothed curves on either one plot or two plots (depending on which looks better for
+your data. Comment on the figure(s).~~
 
 • Without cross validating, which of the 8 smoothed models would you choose to use for future predictions? Your argument might include smoothness, interpretation of coefficients, ability to include
 variability of the predictions, etc.
