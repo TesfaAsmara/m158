@@ -380,7 +380,7 @@ k4<-lol10_rs4 %>%
   ggtitle("Regression Spline Fit")+
   theme_minimal()
 ```
-```{r echo = FALSE}
+```{r include = FALSE}
 mean(k1$upper - k1$lower)
 mean(k2$upper - k2$lower)
 mean(k3$upper - k3$lower)
@@ -530,7 +530,7 @@ results <- bayes.lin.reg(lol10$b_total_damage_dealt,lol10$b_gold_earned, slope.p
 
 confidence_interval = quantile(results$slope, probs = c(0.025, 0.975))
 ```
-In this case, the 95% confidence interval for $\beta$ is $(`r confidence_interval[1]`, `r confidence_interval[2]`)$; this means that we are 95% confident that $\beta_1$ is in this range. Since the confidence interval for $\beta_1$ does not contain 0, it can be concluded that there is evidence of a linear relationship between the $\text{gold earned}$ and the $\text{total damage dealt}$ for the blue team, in a Bayesian manner.
+In this case, the 95% confidence interval for $\beta$ is $(`r confidence_interval[1]`, `r confidence_interval[2]`)$; this means that we are 95% confident that $\beta_1$ is in this range. Since the confidence interval for $\beta_1$ does not contain 0, it can be concluded that there is evidence of a linear relationship between the $\text{gold earned}$ and the $\text{total damage dealt}$ for the average Gold-ranked player on the blue team, in a Bayesian manner.
 
 # Summary
 In the first part of the project, we found and described 10,000 League of Legends ranked matches from the North American region with 775 variables offered through the Riot Games API. We performed descriptive statistical analyses by considering measures of central tendency and measures of dispersion for numerical variables. In the second part of the project, we were motivated by the following question: Does the amount of gold earned have an effect on the total damage dealt for the average Gold-ranked player on the blue team? We wanted to describe the relationship between the gold earned and the total damage dealt on the blue team in the $\texttt{lol10}$ dataset using a line. We used the gold earned across all summoners on the blue team as the predictor variable, $x$, to predict the total damage dealt across all summoners on the blue team, $y$. We observed and handled the nonlinearity of the regression model and the nonconstancy of the error terms. In the third part of the project, we were motivated by the question: Can we better understand the total damage dealt for the average Gold-ranked player on the blue team? A more complex model, containing additional predictor variables `b_gold_earned, b_kills, b_longest_time_spent_living,` and `b_time_c_cing_others`, was employed to provide sufficiently precise predictions of the response variable, $b_total_damage_dealt$. The method is motivated by scenarios where many variables may be simultaneously connected to an output. In the fourth part of the project, we explored applications of ridge regression, LASSO, smoothing splines, kernel smoothers. We also explored Bayesian inference for simple linear regression, which allowed us factor in our prior beliefs and to treat the model parameters as probability distributions.
