@@ -1,7 +1,7 @@
 ---
-title: "math_158_semesterproject_part4"
-author: "Kevin Loun & Tesfa Asmara"
-date: "5/9/2022"
+title: "Project 4 158: Beyond Lineary / Something New / Summary"
+author: "Tesfa Asmara and Kevin Loun"
+date: "5/10/2022"
 output:
   bookdown::pdf_document2:
     extra_dependencies: ["float"]
@@ -31,6 +31,7 @@ library(gghighlight)
 library(ggrepel)
 library(car)
 library(MASS)
+library(Bolstad)
 ```
 # Introduction
 The dataset for this project contains 10,000 League of Legends ranked matches from the North American region with 775 variables offered through the Riot Games API, provided on Kaggle [@riot][@james_2020]. Each match is pulled from players who rank Gold in the League system, a ranking system that matches players of a similar skill level to play with and against each other. Amongst North American players, the Gold skill level was the second most common tier, achieved by 27.7 percent of players, or approximately 49.86 million players when considered against Riot Games' player base of 180 million [@statista_2021][@riot_tweet]. This dataset will be referred to as $\texttt{lol10}$.
@@ -78,7 +79,7 @@ lol10_rec <- recipe(b_total_damage_dealt ~ b_gold_earned + b_kills +b_time_c_cin
 ```
 ## Ridge Regression
 
-Ridge Regression optimization provides a trade-off between two different criteria: variance and bias.It seeks to find coefficients that minimize the SSE of the data set. Ridge Regression attempts to shink the coeffcients in our model close to zero but does not actually remove any coeffcients. This is done using a tuning parameter $\lambda{}>0$. To develop a Ridge Regression model for our data we created a recipe that normalized our data and then used cross validation to find the penalty, $\lambda{}$ value that would best minimize the SSE of our data. After using cross validatation we found that the value of $\lambda{}$ that best minimized the SSE and our coefficients was $0.000001$. The plot bellow showcases how our MSE and $R^2$ value change as a function of $\lambda{}$ and our final ridge regression model can also be found bellow. 
+Ridge Regression optimization provides a trade-off between two different criteria: variance and bias.It seeks to find coefficients that minimize the SSE of the data set. Ridge Regression attempts to shink the coeffcients in our model close to zero but does not actually remove any coeffcients. This is done using a tuning parameter $\lambda{}>0$. To develop a Ridge Regression model for our data we created a recipe that normalized our data and then used cross validation to find the penalty, $\lambda{}$ value that would best minimize the SSE of our data. After using cross validatation we found that the value of $\lambda{}$ that best minimized the SSE and our coefficients was $0.000001$. The plot below showcases how our MSE and $R^2$ value change as a function of $\lambda{}$ and our final ridge regression model can also be found below. 
 
 ```{r, include=FALSE}
 # Model Specification
@@ -151,7 +152,7 @@ ridge_cv %>%
 
 ## LASSO Regression
 
-Similar to Ridge Regression, LASSO optimization provides a trade-off between two different criteria: variance and bias.It seeks to find coefficients that minimize the SSE of the data set. LASSO attempts to shink the coeffcients in our model to zero but does not keep all predictors, only important ones. This is also done using a tuning parameter $\lambda{}>0$. To develop a LASSO model for our data we created a recipe that normalized our data and then used cross validation to find the penalty, $\lambda{}$ value that would best minimize the SSE of our data. After using cross validatation we found that the value of $\lambda{}$ that best minimized the SSE and our coefficients was also $0.000001$. The plot bellow showcases how our MSE and $R^2$ value change as a function of $\lambda{}$ and our final ridge regression model can also be found below. 
+Similar to Ridge Regression, LASSO optimization provides a trade-off between two different criteria: variance and bias.It seeks to find coefficients that minimize the SSE of the data set. LASSO attempts to shink the coeffcients in our model to zero but does not keep all predictors, only important ones. This is also done using a tuning parameter $\lambda{}>0$. To develop a LASSO model for our data we created a recipe that normalized our data and then used cross validation to find the penalty, $\lambda{}$ value that would best minimize the SSE of our data. After using cross validatation we found that the value of $\lambda{}$ that best minimized the SSE and our coefficients was also $0.000001$. The plot below showcases how our MSE and $R^2$ value change as a function of $\lambda{}$ and our final ridge regression model can also be found below. 
 ```{r, include=FALSE}
 # Model Specification
 lasso_spec_tune <- linear_reg(mixture = 1, penalty = tune()) %>%
@@ -228,8 +229,7 @@ lasso_cv %>%
 ```
 
 ## Comparing Models
-
-When comparing MLR, RR, and LASSO we can look at the coefficients of the individual models. In the LASSO Model the coeffcient of `b_time_c_cing_others` has been penalized to 0 while in MLR it is a negative value with and in RR it is a large coefficient. In the MLR and LASSO model `b_kills` has a relatively large coefficient while it becomes more penalized in the RR model.  Finally, the coefficient estimate for `b_longest_time_spent_living` in MLR and LASSO are relatively small compared to RR which is odd because of how RR and LASSO penalized the coefficient differently despite using the same $\lambda{}$ value. The remaining variables appear to remain similar throughout the three models. 
+When comparing MLR, RR, and LASSO we can look at the coefficients of the individual models. In the LASSO Model the coeffcient of `b_time_c_cing_others` has been penalized to 0 while in MLR it is a negative value with and in RR it is a large coefficient. In the MLR and LASSO model `b_kills` has a relatively large coefficient while it becomes more penalized in the RR model. Finally, the coefficient estimate for `b_longest_time_spent_living` in MLR and LASSO are relatively small compared to RR which is odd because of how RR and LASSO penalized the coefficient differently despite using the same $\lambda{}$ value. The remaining variables appear to remain similar throughout the three models. 
 ```{r include=FALSE}
 #MLR Model after normalizing
 lol10mlr_spec <- linear_reg() %>%
@@ -247,35 +247,83 @@ finalize_workflow(ridge_wf %>% add_model(ridge_spec_tune), best_rr) %>%
 ```
 
 ## Plotting Predicted vs Actual for 3 Models
+When comparing the predictions of the MLR, Ridge Regression, and LASSO models visually we can see that the MLR and LASSO model produce predictions that are closest to the actual value of the test set while the Ridge Regression model is the least accurate. However, it should be noted that this could be due to overfitting of the models, so while the models may appear to have more predictive accuracy they may not have the same accuracy on new data. 
 
-When comparing the predictions of the MLR, Ridge Regression, and LASSO models visually we can see that the MLR and LASSO model produce predictions that are closest to the actual value of the test set while the Ridge Regression model is the least accurate. However, it should be noted that this could be due to overfitting of the models, so while the models may appear to have more predictive accuracy they may not have the same accuracy on new data. Note that smooth lines were used in place of individual points for visual clarity.
 ```{r echo=FALSE}
-#Plot
-p<-ggplot()+
-  geom_smooth(lol10, mapping=aes(x=unlist(predict(lasso_fit,lol10)), y=b_total_damage_dealt, color = "Lasso"),method = 'gam') +
-  geom_smooth(lol10, mapping=aes(x=unlist(predict(ridge_fit,lol10)), y=b_total_damage_dealt, color = "Ridge"),method = 'gam') +
-  geom_smooth(lol10, mapping=aes(x=unlist(predict(lol10_fit, lol10)), y=b_total_damage_dealt, color= "MLR"),method = 'gam')+
-  geom_abline(intercept=0)+
-  labs(x='Predicted Values', y='Actual Values', title='Predicted vs. Actual Values of 3 Models')
-suppressMessages(print(p))
+MLR_aug <- lol10_lm %>%
+  augment(newdata = lol10_test) %>%
+  rename(.pred = .fitted)
+  
+lasso_aug <- lasso_fit %>%
+  augment(new_data = lol10_test)
+
+ridge_aug <- ridge_fit %>%
+  augment(new_data = lol10_test)
+
+comparisonPlot <- MLR_aug %>%
+  ggplot(aes(x = b_total_damage_dealt, y = .pred))+
+  geom_point(color = "black", alpha = .3, size = 1)+
+  geom_smooth(method = "lm", se = FALSE, aes(color = "MLR"), alpha = .1)+
+  geom_smooth(data = lasso_aug, method = "lm", se= FALSE, aes(color = "Lasso"), alpha = .1)+
+  geom_smooth(data = ridge_aug, method = "lm", se= FALSE, aes(color = "Ridge Regression"), alpha = .1)+
+  geom_abline(slope = 1, intercept = 0)+
+  labs(color = "Legend")
+suppressMessages(print(comparisonPlot))
 ```
 
 ## Regression Spline
+We chose to apply the Regression Spline smoothing technique on `b_gold_earned` plotted against `b_total_damage_dealt`, where we earlier observed the nonlinearity of the regression model and the nonconstancy of the error terms. We select the combinations of degrees of freedom and degree based on their having a high coefficient of determination and low MSE.
 
-In our Regression Spline Model we chose to run a model on `b_gold_earned` and `b_total_damage_dealt`. Since Regression Splines use Degrees of Freedom as the primary paramter to determine the number of knots used in the model we decided to use four different values of degrees of freedom:3,6,12,and 18. Below is a plot of the 4 Regression Spline models with data from our dataset. Visually, it appears that DF=6 produces the best model because it is not as affected by the outlier as df=12 and df=18 and it is not indiffernet to outliers as df=3 is. 
+```{r choosing df and degree, include = FALSE}
+set.seed(4747)
+
+lol10_cv_smooth <- vfold_cv(lol10, v = 5)
+
+smooth_rec <- recipe(b_total_damage_dealt ~ b_gold_earned, data = lol10) %>%
+  step_bs(b_gold_earned, deg_free = tune(), degree = tune())
+
+
+
+lol10_lm_smooth <- linear_reg() %>%
+  set_engine("lm")
+
+lol10_df <- grid_regular(deg_free(range = c(5, 15)), 
+                        degree(range = c(1,5)) , levels = 5)
+
+lol10_tuned <- lol10_lm_smooth %>%
+  tune_grid(smooth_rec,
+            resamples = lol10_cv_smooth,
+            grid = lol10_df)
+
+collect_metrics(lol10_tuned)
+```
+
+```{r echo = FALSE}
+collect_metrics(lol10_tuned) %>%
+  ggplot(aes(x = deg_free, y = mean, color = as.factor(degree))) + 
+  geom_line() + 
+  facet_grid(.metric ~ ., scales = "free") + 
+  labs(color = "degree") + 
+  ylab("") + 
+  xlab("degrees of freedom (# non-intercept coefficients)")+
+  scale_x_continuous(breaks = seq(5, 15, by = 1), limits=c(5, 15)) 
+```
+
 ```{r include=FALSE}
-#ggplot(lol10_train, aes(x=b_gold_earned,y=b_total_damage_dealt))+
-  #geom_point()
 require(splines)
-lol10_knot1 <- bs(lol10$b_gold_earned, df=3, degree=3)
-lol10_knot2 <- bs(lol10$b_gold_earned, df=6, degree=3)
-lol10_knot3 <- bs(lol10$b_gold_earned, df=12, degree=3)
-lol10_knot4 <- bs(lol10$b_gold_earned, df=18, degree=3)
+df_dg1 <- c(5,5)
+df_dg2 <- c(7,5)
+df_dg3 <- c(10,3)
+df_dg4 <- c(15,1)
+
+lol10_knot1 <- bs(lol10$b_gold_earned, df=df_dg1[1], degree=df_dg1[2])
+lol10_knot2 <- bs(lol10$b_gold_earned, df=df_dg2[1], degree=df_dg2[2])
+lol10_knot3 <- bs(lol10$b_gold_earned, df=df_dg3[1], degree=df_dg3[2])
+lol10_knot4 <- bs(lol10$b_gold_earned, df=df_dg4[1], degree=df_dg4[2])
 lol10_rs1 <- lm(b_total_damage_dealt ~ lol10_knot1, data=lol10)
 lol10_rs2 <- lm(b_total_damage_dealt ~ lol10_knot2, data=lol10)
 lol10_rs3 <- lm(b_total_damage_dealt ~ lol10_knot3, data=lol10)
 lol10_rs4 <- lm(b_total_damage_dealt ~ lol10_knot4, data=lol10)
-
 
 k1<-lol10_rs1 %>% 
   augment(se_fit = TRUE) %>% 
@@ -306,81 +354,191 @@ k4<-lol10_rs4 %>%
          lower = .fitted - 2*.se.fit) 
 ```
 
-```{r, echo=FALSE}
-  ggplot(lol10, mapping=aes(x = b_gold_earned, y = b_total_damage_dealt)) + 
-  geom_point() + 
-  geom_line(k1,mapping=aes(y = .fitted, color = "3")) + 
-  #geom_line(k1,mapping=aes(y = upper), lty = 3, color = "blue") + 
-  #geom_line(k1,mapping=aes(y = lower), lty = 3, color = "blue") + 
-  geom_line(k2,mapping=aes(y = .fitted,color = "6")) + 
-  #geom_line(k2,mapping=aes(y = upper), lty = 3,color = "red") + 
-  #geom_line(k2,mapping=aes(y = lower), lty = 3,color = "red") + 
-  geom_line(k3,mapping=aes(y = .fitted,color = "12")) + 
-  #geom_line(k3,mapping=aes(y = upper), lty = 3,color = "green") + 
-  #geom_line(k3,mapping=aes(y = lower), lty = 3,color = "green")+
-  geom_line(k4,mapping=aes(y = .fitted,color = "18")) + 
-  #geom_line(k4,mapping=aes(y = upper), lty = 3,color = "purple") + 
-  #geom_line(k4,mapping=aes(y = lower), lty = 3,color = "purple")+
-  labs(color = "df")+
-  ggtitle("Regression Spline Fit")
-
+```{r echo = FALSE}
+  ggplot(k1, aes(x = b_gold_earned, y = b_total_damage_dealt)) + 
+  geom_point(alpha = .07, size = .3) + 
+  geom_line(aes(y = .fitted, color = "df 5, degree 5")) + 
+  geom_line(aes(y = upper), lty = 3, color = "blue") + 
+  geom_line(aes(y = lower), lty = 3, color = "blue") + 
+  
+  
+  geom_line(data = k2, aes(y = .fitted, color = "df 7, degree 5"))+
+  geom_line(data = k2, aes(y = upper), lty = 3, color = "red") + 
+  geom_line(data = k2, aes(y = lower), lty = 3, color = "red") +
+  
+  
+  geom_line(data = k3, aes(y = .fitted, color = "df 10, degree 3"))+
+  geom_line(data = k3, aes(y = upper), lty = 3, color = "green") + 
+  geom_line(data = k3, aes(y = lower), lty = 3, color = "green")+ 
+  
+  
+  geom_line(data = k4, aes(y = .fitted, color = "df 15, degree 1"))+
+  geom_line(data = k4, aes(y = upper), lty = 3, color = "purple") + 
+  geom_line(data = k4, aes(y = lower), lty = 3, color = "purple")+
+   labs(color = "Legend")+
+    
+  ggtitle("Regression Spline Fit")+
+  theme_minimal()
 ```
+```{r echo = FALSE}
+mean(k1$upper - k1$lower)
+mean(k2$upper - k2$lower)
+mean(k3$upper - k3$lower)
+mean(k4$upper - k4$lower)
+```
+In the graph, the average difference between the upper standard error and lower standard error is the smallest for the blue line. This corresponds to employing 5 degrees and 5 knots. So, for our comparisons to the loess smoothing technique, we will use the 5 degrees and 5 knots Regression Spline.  
 
 ## Loess
+In our Loess model we chose to run a model on `b_gold_earned` and `b_total_damage_dealt`. Since Loess models use span as a parameter to determine weights of points, we choose to use six span values to create six different models. Our span values are .1, .25, 0.50, 0.75, 1.00, and 2.00. Below is a plot of our six models and visually it appears that the best model has a span of .75 because the other models appear to be affected by outlier points or are indifferent to them. The curves with $span = 0.1, 0.2$ overfit the points. The curve with $span = 2$ looks to have high bias. Similarly, the curve with $span = 1$ seems to not capture the relationship. The differences between the curves with $span = 0.5, 0.75$ are considered to not be significant.
 
-In our Loess model we chose to run a model on `b_gold_earned` and `b_total_damage_dealt`. Since Loess models use span asa parameter to determine weights of points, we choose to use four span values to create four different models. Our span values are .3 , .6, 1.0 , and 1.5. Below is a plot of our four models and visually it appears that the best model has a span of .6 because the other models appear to affected by outlier points or indifferent to them. 
 ```{r echo=FALSE}
+spanlist <- c(0.10, 0.25, 0.50, 0.75, 1.00, 2.00)
 loess_unif <- data.frame()
-spanlist <- c(.3, .6, 1.00, 1.50)
-for (i in 1:length(spanlist))
-{
-  loess_unif_pred <- loess(b_total_damage_dealt ~ b_gold_earned, span = spanlist[i], 
+for(i in 1:length(spanlist)){
+  
+loess_unif_pred <- loess(b_total_damage_dealt ~ b_gold_earned, span = spanlist[i], 
                            data = lol10) %>%
     augment() %>%
     mutate(span = spanlist[i])
-  
-  loess_unif <- loess_unif %>% bind_rows(loess_unif_pred)
+
+loess_unif <- loess_unif %>% bind_rows(loess_unif_pred)
   
 }
     loess_unif %>%
       ggplot(aes(x = b_gold_earned, y = b_total_damage_dealt)) + 
-      geom_point() + 
-      geom_line(aes(x = b_gold_earned, y = .fitted, color = as.factor(span))) + 
-      labs(color = "span") + 
-      ggtitle("Loess for Different Spans")
-
-
+      geom_point(alpha = .02, size = .3) + 
+      geom_line(aes(x = b_gold_earned, y = .fitted, color = as.factor(span))) +
+      labs(color = "span")+
+      theme_minimal()
 ```
 
 ## Best Smooth Model
+Now, as aforementioned, the primary goal of our model is to better understand the total damage dealt for the average Gold-ranked player on the blue team. As such, we care more about coefficient estimates and their interpretation over predictive power. The Regression Spline smoothing technique does provides a functional model, whereas loess does not. Therefore, the Regression Spline model would be better than the Loess model for our particular research question.
 
+```{r echo=FALSE}
+loess(b_total_damage_dealt ~ b_gold_earned, span = 0.75, data = lol10) %>%
+  augment() %>%
+  ggplot(aes(x = b_gold_earned, y = b_total_damage_dealt)) + 
+      geom_point(alpha = .03, size = .3) + 
+      geom_line(aes(x = b_gold_earned, y = .fitted, color = "Loess"))+
+  geom_line(data = k1, aes(y = .fitted, color = "Ridge"))+
+  geom_line(data = k1, aes(y = upper), lty = 3, color = "red") + 
+  geom_line(data = k1, aes(y = lower), lty = 3, color = "red")+
+   scale_color_manual(name = "Model", values = c("Loess" = "darkblue", "Ridge" = "red"))+
+  theme_minimal()
+```
 
 ## Conclusion
 After building or MLR model, we began to look at our data through Shrinkage and Smoothing methods, as such we built and fitted our data to Ridge Regression, LASSO, Regression Spline, and Loess Models. We found that interestingly in our LASSO and Ridge Regression models our MSE did not change much with a change in our penalty value until large values of $\lambda{}$ which interested us because it made us wonder if this was simply due to our data or if it was because we had mutated our variables. When comparing MLR, LASSO, and Ridge Regression we found that there were significant differences in the coefficients estimated by the three models, but when compared visually MLR and LASSO had very similar predictive accuracy while Ridge Regression appeared the least accurate. When looking at our  Smoothing models individually, we found that our Ridge Rrgression model using degrees of freedom 6 and Loess model uwing a span of .6 to be the best models for our data. Based on our results we would ask the question: would the results of our Shrinkage models be different if we had not mutated our data but instead used our initial data, and would it have been different if we had used more data from the initial data set?
 
-### TO DO
+# Bayesian Inference for Simple Linear Regression [@bolstad]
 
-~~• Introduction (briefly refresh the reader’s mind as to the variables of interest). Remember that you
-should include a reference for the original data source, and the reader should know to what population
-you are inferring your results.~~
+## Bayes’ Theorem for the Regression Model
+While a frequentist assumes that there are true values of the parameters of the model and computes the point estimates of the parameters, a Bayesian asserts that only data are real, and treats the model parameters as probability distributions which are to be inferred. Bayes’ theorem is summarized by
 
-~~• Run both ridge regression and LASSO on the full variable set (use cross validation to find lambda).
-Compare and contrast the models (i.e., coefficients) with the final MLR model from the previous
-project assignment.~~
+$$posterior \propto prior \times likelihood,$$
+so we need to determine the likelihood and decide on our prior for this model.
 
-~~• Make a single plot with the observed response variable on the x-axis and the predicted response
-variable on the y-axis. Overlay (using color with a legend) 3 different predictions: MLR, RR, LASSO.
-Comment on the figure.~~
+## The Joint Prior for $\beta$ and $\alpha_{\bar{x}}$
 
-~~• Choose a single variable and run both smoothing spline and kernel smoother models. Change the
-parameters so that you have at least four different models for each method.~~
+Using the alternate parameterization we obtain
 
-~~• Plot the (8+) smoothed curves on either one plot or two plots (depending on which looks better for
-your data. Comment on the figure(s).~~
+$$y_i = \alpha_{\bar{x}}+\beta(x_i-\bar{x})+e_i$$
 
-• Without cross validating, which of the 8 smoothed models would you choose to use for future predictions? Your argument might include smoothness, interpretation of coefficients, ability to include
-variability of the predictions, etc.
+where $\alpha_{\bar{x}}$ is the mean value for $y$ given $x = \bar{x}$, and $\beta$ is the slope.Each $e_i$ is normally distributed with mean 0 and known variance $\sigma^2$. The $e_i$ are all independent of each other. Therefore $y_i\mid x_i$ is normally distributed with mean $\alpha_{\bar{x}} + \beta(x_i -\bar{x})$ and variance $\sigma^2$ and all the $y_i \mid x_i$ are all independent of each other.
 
-• A Conclusion (Summarize your results. Comment on anything of interest that occurred. Were the
-data approximately what you expected or did some of the results surprise you? What other questions
-would you like to ask about the data?)
+The likelihood of observation $i$ is
+
+$$likelihood_i(\alpha_{\bar{x}},\beta) \propto e^{-\frac{1}{2\sigma^2}\left[y_i-(\alpha_{\bar{x}}+\beta(x_i-\bar{x}))\right]^2}$$
+The likelihood of a sample of observations $i = 1, \dots, n$ is 
+
+\begin{align*}
+likelihood_{sample}(\alpha_{\bar{x}},\beta) &\propto \prod\limits_{i=1}^n e^{-\frac{1}{2\sigma^2}\left[y_i-(\alpha_{\bar{x}}+\beta(x_i-\bar{x}))\right]^2} \\
+&\propto  e^{\sum\limits_{i=1}^n-\frac{1}{2\sigma^2}\left[y_i-(\alpha_{\bar{x}}+\beta(x_i-\bar{x}))\right]^2}
+\end{align*}
+
+The term in brackets in the exponent equals
+
+$$\left[\sum\limits_{i=1}^n\left[y_i - \bar{y} + \bar{y} -(\alpha_{\bar{x}}+\beta(x_i-\bar{x}))\right]^2\right].$$
+Breaking this into three sums and multiplying it out gives us
+
+\begin{align*}
+\sum\limits_{i=1}^n(y_i -\bar{y})^2 &+ 2\sum\limits_{i=1}^n(y_i -\bar{y})(\bar{y} -(\alpha_{\bar{x}}+\beta(x_i-\bar{x})))\\ 
+& + \sum\limits_{i=1}^n (\bar{y} -(\alpha_{\bar{x}}+\beta(x_i-\bar{x})))^2.
+\end{align*}
+
+This simplifies into
+
+$$SS_y- 2\beta SS_{xy} + \beta^2 SS_x + n(\alpha_{\bar{x}}-\bar{y})^2,$$
+where $SS_y = \sum\limits_{i=1}^n (y_i - \bar{y})$, $SS_{xy} = \sum\limits_{i=1}^n (y_i- \bar{y})(x_i-\bar{x})$, and $SS_x = \sum\limits_{i=1}^n(x_i-\bar{x})^2$.
+
+The joint likelihood is
+
+\begin{align*}
+likelihood_{sample}(\alpha_{\bar{x}},\beta) &\propto \prod\limits_{i=1}^n e^{-\frac{1}{2\sigma^2}\left[SS_y- 2\beta SS_{xy} + \beta^2 SS_x + n(\alpha_{\bar{x}}-\bar{y})^2\right]} \\
+&\propto \prod\limits_{i=1}^n e^{-\frac{1}{2\sigma^2}\left[SS_y- 2\beta SS_{xy} + \beta^2 SS_x\right]} \times e^{-\frac{1}{2\sigma^2}\left[n(\alpha_{\bar{x}}-\bar{y})^2\right]}
+\end{align*}
+
+We factor out $SS_x$ in the first exponential, complete the square, and absorb
+the part that does not depend on any parameter into the proportionality
+constant. This gives us
+
+\begin{align*}
+f(y_1, \dots, y_n \mid \alpha_{\bar{x}}, \beta) &\propto e^{-\frac{SS_x}{2\sigma^2}\left[\beta - \frac{SS_{xy}}{SS_x}\right]^2} \times e^{-\frac{n}{2\sigma^2}\left[(\alpha_{\bar{x}}-\bar{y})^2\right]}\\
+&\propto f(y_1, \dots, y_n \mid \alpha_{\bar{x}}) \times e^f(y_1, \dots, y_n \mid \beta)
+\end{align*}
+
+The joint likelihood has been factored into two independent likelihoods. If we multiply the joint likelihood by the joint prior, then the result will be proportional to the joint posterior. The joint prior of the parameter is proportional to:
+
+$$g(\alpha_{\bar{x}}, \beta) = g(\alpha_{\bar{x}}) \times g(\beta).$$
+
+We can either use normal priors, or flat priors. In this project, we use independent flat priors for $\beta$ and $\alpha_{\bar{x}}$.
+
+## The Joint Posterior for $\beta$ and $\alpha_{\bar{x}}$
+
+We are not interested in the posterior for $\alpha_{\bar{x}}$, but we are more interested in the posterior for $\beta$. We see that the posterior mean for $\beta$ is the least squares slope
+
+$$m'_\beta = \beta,$$
+and that the posterior variance is
+
+$$(s'_\beta)^2 = \frac{\sigma^2}{SS_x}.$$
+
+## Bayesian Credible Interval for Slope
+
+With simple linear regression we end up with point estimates of parameters, but now we have an entire distribution for each parameter, and can use it to determine confidence levels. A $(1-\alpha)100\%$ Bayesian credible interval for slope $\beta$ is 
+
+$$m'_\beta \pm z_{\frac{\alpha}{2}} \times \sqrt{(s'_\beta)^2}.$$ 
+
+If we do not know $\sigma^2$, then we can estimate it from the sample data:
+
+$$\sigma^2 = \frac{\sum\limits_{i=1}^n (y_i - (A_{\bar{x}} + B(x_i-\bar{x})))^2}{n-2},$$
+resulting in a confidence interval of 
+
+$$m'_\beta \pm t_{\frac{\alpha}{2}} \sqrt{(s'_\beta)^2}.$$
+
+## Testing Two-Sided Hypothesis about Slope
+
+We wish to test whether or not the slope could be zero, i.e. $\beta = 0$. If it could be zero, then we can not be sure that the mean of the response variable depends on the explanatory variable. We would like to test $H_0: \beta = 0$ versus $H_1: \beta \neq 0$ at the $\alpha$ level of significance in a Bayesian manner, before we use the regression model to make predictions. To
+do the test in a Bayesian manner, look where 0 lies in relation to the credible
+interval. If it lies outside the interval, we reject $H_0$. Otherwise, we cannot
+reject the null hypothesis, and we should not use the regression model to help
+with predictions.
+
+
+```{r echo = FALSE}
+results <- bayes.lin.reg(lol10$b_total_damage_dealt,lol10$b_gold_earned, slope.prior = "flat", intcpt.prior = "flat", alpha = 0.05, plot.data = TRUE)
+
+confidence_interval = quantile(results$slope, probs = c(0.025, 0.975))
+```
+In this case, the 95% confidence interval for $\beta$ is $(`r confidence_interval[1]`, `r confidence_interval[2]`)$; this means that we are 95% confident that $\beta_1$ is in this range. Since the confidence interval for $\beta_1$ does not contain 0, it can be concluded that there is evidence of a linear relationship between the $\text{gold earned}$ and the $\text{total damage dealt}$ for the blue team, in a Bayesian manner.
+
+# Summary
+In the first part of the project, we found and described 10,000 League of Legends ranked matches from the North American region with 775 variables offered through the Riot Games API. We performed descriptive statistical analyses by considering measures of central tendency and measures of dispersion for numerical variables. In the second part of the project, we were motivated by the following question: Does the amount of gold earned have an effect on the total damage dealt for the average Gold-ranked player on the blue team? We wanted to describe the relationship between the gold earned and the total damage dealt on the blue team in the $\texttt{lol10}$ dataset using a line. We used the gold earned across all summoners on the blue team as the predictor variable, $x$, to predict the total damage dealt across all summoners on the blue team, $y$. We observed and handled the nonlinearity of the regression model and the nonconstancy of the error terms. In the third part of the project, we were motivated by the question: Can we better understand the total damage dealt for the average Gold-ranked player on the blue team? A more complex model, containing additional predictor variables `b_gold_earned, b_kills, b_longest_time_spent_living,` and `b_time_c_cing_others`, was employed to provide sufficiently precise predictions of the response variable, $b_total_damage_dealt$. The method is motivated by scenarios where many variables may be simultaneously connected to an output. In the fourth part of the project, we explored applications of ridge regression, LASSO, smoothing splines, kernel smoothers. We also explored Bayesian inference for simple linear regression, which allowed us factor in our prior beliefs and to treat the model parameters as probability distributions.
+
+![Variables and their descriptions](./Variables_and_their_descriptions_Project_3.pdf)
+
+# Bibliography {-}
+\setlength{\parindent}{-0.2in}
+\setlength{\leftskip}{0.2in}
+\noindent
+<div id="refs"></div>
